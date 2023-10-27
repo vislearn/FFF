@@ -1,21 +1,10 @@
-from math import prod
-
 import torch
-from torch.nn import Flatten
-from torch.utils.data import TensorDataset, DataLoader, Dataset
+from torch.utils.data import TensorDataset
 
-from tqdm import tqdm
 import math
 
 from mlae.data.utils import TrainValTest
-try:
-    import sbibm
-    from sbi import inference as inference
-except ModuleNotFoundError:
-    print("Need to install sbi and sbibm modules to simulate datasets")
 import os
-
-CELEBA_CACHE = {}
 
 
 def get_sbi_dataset(name:str, root: str, num_simulations: int = 1000) -> TrainValTest:
@@ -30,6 +19,9 @@ def get_sbi_dataset(name:str, root: str, num_simulations: int = 1000) -> TrainVa
 
 
 def simulate_task(taskname: str, num_simulations: int = 1000, val_fraction: float = 0.1):
+    import sbibm
+    from sbi import inference as inference
+
     task = sbibm.get_task(taskname)
     simulator = task.get_simulator(max_calls=num_simulations)
     proposal = task.get_prior_dist()

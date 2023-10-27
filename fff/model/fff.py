@@ -11,7 +11,6 @@ from torch.nn import Sequential
 from fff.loss import nll_surrogate
 from fff.model.base import BaseModelHParams, BaseModel
 from fff.other_losses.exact_jac_det import log_det_exact
-from fff.other_losses.mmd import maximum_mean_discrepancy
 
 LogProbResult = namedtuple("LogProbResult", ["z", "x1", "log_prob", "regularizations"])
 ConditionedBatch = namedtuple("ConditionedBatch", [
@@ -188,14 +187,6 @@ class FreeFormFlow(BaseModel):
             z = self.encode(x, c)
         if x1 is None:
             x1 = self.decode(z, c)
-
-        if not self.training or check_keys("mmd"):
-            try:
-                latent_samples = self.get_latent(z.device).sample(z.shape[:1])
-                loss_values["mmd"] = maximum_mean_discrepancy(latent_samples, z)
-            except (RuntimeError, TypeError):
-                # Probably incorrect shape
-                pass
 
         # Wasserstein distance of marginal to Gaussian
         with torch.no_grad():

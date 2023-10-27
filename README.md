@@ -107,7 +107,7 @@ When training has finished, you can import the model via
 import fff
 
 model = fff.model.FreeFormFlow.load_from_checkpoint(
-    'lightning_logs/fff/version_0/checkpoints/last.ckpt'
+    'lightning_logs/dw4/version_0/checkpoints/last.ckpt'
 )
 ```
 
@@ -118,8 +118,9 @@ python -m lightning_trainable.launcher.fit configs/dw4.yaml batch_size=128 loss_
 
 ### Known issues
 
-The models trained with $E(n)$-GNNs are sometime unstable. This is usually caught with an assertion and training is stopped.
-In almost all cases, training can be recovered by continuing the training process by passing the `--continue-from [CHECKPOINT]` flag to the training, such as:
+Training with $E(n)$-GNNs is sometimes unstable. This is usually caught with an assertion in a later step and training is stopped.
+In almost all cases, training can be stably resumed by passing the `--continue-from [CHECKPOINT]` flag to the training, such as:
 ```bash
 python -m lightning_trainable.launcher.fit configs/dw4.yaml --name '{data_set[name]}' --continue-from lightning_logs/dw4/version_0/checkpoints/last.ckpt
 ```
+This reloads the entire training state (model state, optim state, epoch, etc.) from the checkpoint and continues training from there.

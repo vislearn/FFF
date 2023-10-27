@@ -2,7 +2,7 @@
 
 This is the official `PyTorch` implementation for our preprints:
 
-1. [Free-form flows: Make Any Architecture a Normalizing Flow](http://arxiv.org/abs/2310.16624):
+1. [Free-form flows: Make Any Architecture a Normalizing Flow](http://arxiv.org/abs/2310.16624) on full-dimensional normalizing flows:
     ```bibtex
     @article{draxler2023freeform,
         title = {Free-form flows: Make Any Architecture a Normalizing Flow},
@@ -11,7 +11,7 @@ This is the official `PyTorch` implementation for our preprints:
         year = {2023}
     }
     ```
-2. [Lifting Architectural Constraints of Injective Flows](http://arxiv.org/abs/2306.01843):
+2. [Lifting Architectural Constraints of Injective Flows](http://arxiv.org/abs/2306.01843) on learning a manifold and the distribution on it jointly:
     ```bibtex
     @article{sorrenson2023maximum,
         title = {Lifting Architectural Constraints of Injective Flows},
@@ -51,9 +51,9 @@ import fff
 ### Copy `fff/loss.py` into your project
 
 If you do not want to add our `fff` package as a dependency,
-but still want to use the FFF loss function,
+but still want to use the FFF or FIF loss function,
 you can copy the `fff/loss.py` file into your own project.
-It does not have any dependencies on the rest of the repo.
+It does not have any dependencies except for PyTorch.
 
 
 ## Basic usage
@@ -89,12 +89,12 @@ for epoch in range(n_epochs):
 
 ### Reproduce our experiments
 
-All training configurations can be found in the `configs` directory.
+All training configurations from our papers can be found in the `configs/(fff|fif)` directories.
 
 Our training framework is built on https://github.com/LarsKue/lightning-trainable based on PyTorch Lightning. There is no `main.py`, but you can train all our models via the `lightning_trainable.launcher.fit` module.
 For example, to train the Boltzmann generator on DW4:
 ```bash
-python -m lightning_trainable.launcher.fit configs/dw4.yaml --name '{data_set[name]}'
+python -m lightning_trainable.launcher.fit configs/fff/dw4.yaml --name '{data_set[name]}'
 ```
 
 This will create a new directory `lightning_logs/dw4/`. You can monitor the run via `tensorboard`:
@@ -128,5 +128,5 @@ This reloads the entire training state (model state, optim state, epoch, etc.) f
 
 ### Setup your own training
 
-Start with the config file in `configs/` that fits your needs best and modify it to your needs.
+Start with the config file in `configs/(fff|fif)` that fits your needs best and modify it.
 For custom data sets, add the data set to `fff.data`.

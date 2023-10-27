@@ -88,10 +88,11 @@ for epoch in range(n_epochs):
 ```
 
 
-### Build models based on our framework
+### Reproduce our experiments
 
-Our training framework is built on https://github.com/LarsKue/lightning-trainable based on PyTorch Lightning. There is no `main.py`, but
-you can train all our models via the `lightning_trainable.launcher.fit` module.
+All training configurations can be found in the `configs` directory.
+
+Our training framework is built on https://github.com/LarsKue/lightning-trainable based on PyTorch Lightning. There is no `main.py`, but you can train all our models via the `lightning_trainable.launcher.fit` module.
 For example, to train the Boltzmann generator on DW4:
 ```bash
 python -m lightning_trainable.launcher.fit configs/dw4.yaml --name '{data_set[name]}'
@@ -116,7 +117,7 @@ If you want to overwrite the default parameters, you can add `key=value`-pairs a
 python -m lightning_trainable.launcher.fit configs/dw4.yaml batch_size=128 loss_weights.noisy_reconstruction=20 --name '{data_set[name]}'
 ```
 
-### Known issues
+#### Known issues
 
 Training with $E(n)$-GNNs is sometimes unstable. This is usually caught with an assertion in a later step and training is stopped.
 In almost all cases, training can be stably resumed by passing the `--continue-from [CHECKPOINT]` flag to the training, such as:
@@ -124,3 +125,9 @@ In almost all cases, training can be stably resumed by passing the `--continue-f
 python -m lightning_trainable.launcher.fit configs/dw4.yaml --name '{data_set[name]}' --continue-from lightning_logs/dw4/version_0/checkpoints/last.ckpt
 ```
 This reloads the entire training state (model state, optim state, epoch, etc.) from the checkpoint and continues training from there.
+
+
+### Setup your own training
+
+Start with the config file in `configs/` that fits your needs best and modify it to your needs.
+For custom data sets, add the data set to `fff.data`.

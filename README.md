@@ -13,7 +13,7 @@ This is the official `PyTorch` implementation for our preprints:
     ```
 2. [Lifting Architectural Constraints of Injective Flows](http://arxiv.org/abs/2306.01843) on learning a manifold and the distribution on it jointly:
     ```bibtex
-    @article{sorrenson2023maximum,
+    @article{sorrenson2023lifting,
         title = {Lifting Architectural Constraints of Injective Flows},
         author = {Sorrenson, Peter and Draxler, Felix and Rousselot, Armand and Hummerich, Sander and Zimmermann, Lea and Köthe, Ullrich},
         journal = {arXiv preprint arXiv:2306.01843},
@@ -113,7 +113,7 @@ model = fff.model.FreeFormFlow.load_from_checkpoint(
 
 If you want to overwrite the default parameters, you can add `key=value`-pairs after the config file:
 ```bash
-python -m lightning_trainable.launcher.fit configs/dw4.yaml batch_size=128 loss_weights.noisy_reconstruction=20 --name '{data_set[name]}'
+python -m lightning_trainable.launcher.fit configs/fff/dw4.yaml batch_size=128 loss_weights.noisy_reconstruction=20 --name '{data_set[name]}'
 ```
 
 #### Known issues
@@ -121,7 +121,7 @@ python -m lightning_trainable.launcher.fit configs/dw4.yaml batch_size=128 loss_
 Training with $E(n)$-GNNs is sometimes unstable. This is usually caught with an assertion in a later step and training is stopped.
 In almost all cases, training can be stably resumed from the last epoch checkpoint by passing the `--continue-from [CHECKPOINT]` flag to the training, such as:
 ```bash
-python -m lightning_trainable.launcher.fit configs/dw4.yaml --name '{data_set[name]}' --continue-from lightning_logs/dw4/version_0/checkpoints/last.ckpt
+python -m lightning_trainable.launcher.fit configs/fff/dw4.yaml --name '{data_set[name]}' --continue-from lightning_logs/dw4/version_0/checkpoints/last.ckpt
 ```
 This reloads the entire training state (model state, optim state, epoch, etc.) from the checkpoint and continues training from there.
 

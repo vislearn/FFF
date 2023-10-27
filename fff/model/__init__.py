@@ -1,5 +1,5 @@
 from .fff import FreeFormFlow, FreeFormFlowHParams
-from .mol_fff import MoleculeFreeFormFlow, MoleculeFreeFormFlowHParams
+from .fff_mol import MoleculeFreeFormFlow, MoleculeFreeFormFlowHParams
 from .auto_encoder import FullyConnectedNetwork, FullyConnectedNetworkHParams
 from .conv_auto_encoder import ConvolutionalNeuralNetwork, ConvolutionalNeuralNetworkHParams
 from .injective_flow import InjectiveFlow, InjectiveFlowHParams

@@ -82,6 +82,7 @@ class FreeFormBase(Trainable):
                     raise NotImplementedError("More than one condition dimension is not supported.")
                 self._data_cond_dim = data_sample[1].shape[0]
         self.latents = {}
+        self.models = build_model(self.hparams.models, self.data_dim, self.cond_dim)
 
     def train_dataloader(self) -> DataLoader | list[DataLoader]:
         """
@@ -198,8 +199,6 @@ class FreeFormBase(Trainable):
         if self.hparams.track_train_time:
             callbacks.append(TrainWallClock())
         return callbacks
-
-        self.models = build_model(self.hparams.models, self.data_dim, self.cond_dim)
 
     def encode(self, x, c):
         for model in self.models:

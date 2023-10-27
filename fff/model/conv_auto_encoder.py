@@ -1,12 +1,12 @@
 from collections import OrderedDict
-from math import sqrt, prod
+from math import prod
 
 import torch
 import torch.nn as nn
 
 from fff.model.auto_encoder import SkipConnection
-from .base import ModelHParams
 from fff.model.utils import guess_image_shape, wrap_batch_norm2d
+from .base import ModelHParams
 
 
 class ConvolutionalNeuralNetworkHParams(ModelHParams):

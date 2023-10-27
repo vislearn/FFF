@@ -4,8 +4,6 @@ import numpy as np
 import torch
 from math import ceil, sqrt
 
-from fff.data.qm9.data.utils import initialize_datasets
-from fff.data.qm9.dataset import filter_atoms
 from fff.model.en_graph_utils.utils import remove_mean
 from torch.utils.data import TensorDataset
 
@@ -71,6 +69,9 @@ def load_qm9_dataset(
         filter_n_atoms=None, subtract_thermo=True, remove_h=False,
         force_download=False, include_charges=True
 ):
+    from fff.data.qm9.data.utils import initialize_datasets
+    from fff.data.qm9.dataset import filter_atoms
+
     datasets, num_species, charge_scale = initialize_datasets(
         datadir=root, dataset="qm9",
         subtract_thermo=subtract_thermo,

@@ -241,17 +241,18 @@ class FreeFormBase(Trainable):
 
         # Compute log-likelihood
         try:
-            loss_gauss = self.get_latent(x.device).log_prob(out.z, c)
+            # Try conditional latent distribution
+            latent_prob = self.get_latent(x.device).log_prob(out.z, c)
         except TypeError:
-            loss_gauss = self.get_latent(x.device).log_prob(out.z)
+            latent_prob = self.get_latent(x.device).log_prob(out.z)
 
         # Add additional nll terms if available
         for key, value in list(out.regularizations.items()):
             if key.startswith("vol_change_"):
-                out.regularizations[key.replace("vol_change_", "nll_")] = -(loss_gauss + value)
+                out.regularizations[key.replace("vol_change_", "nll_")] = -(latent_prob + value)
 
         return LogProbResult(
-            out.z, out.x1, loss_gauss + volume_change, out.regularizations
+            out.z, out.x1, latent_prob + volume_change, out.regularizations
         )
 
     def compute_metrics(self, batch, batch_idx) -> dict:

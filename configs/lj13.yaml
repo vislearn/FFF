@@ -1,0 +1,32 @@
+model: fff.model.FreeFormFlow
+
+data_set:
+  name: lj13
+  root: data
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 200
+
+models:
+  - name: fff.model.ENGNN
+    n_dims: 3
+    latent_dim: data
+    n_features: 0
+    n_layers: 8
+
+latent_distribution:
+  name: position-feature-prior
+  n_dim: 3
+  n_one_hot: 0
+  n_charges: 0
+
+batch_size: 256
+optimizer:
+  name: adam
+  lr: 0.001
+gradient_clip: 1.0
+max_epochs: 400
+
+accelerator: "gpu"
+num_workers: 0

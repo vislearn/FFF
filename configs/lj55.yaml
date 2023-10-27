@@ -1,0 +1,34 @@
+model: fff.model.FreeFormFlow
+
+data_set:
+  name: lj55
+  root: data
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 500
+exact_chunk_size: 6  # Reduces memory usage in exact nll computation
+skip_val_nll: 1
+
+models:
+  - name: fff.model.ENGNN
+    n_dims: 3
+    latent_dim: data
+    n_features: 0
+    n_layers: 8
+
+latent_distribution:
+  name: position-feature-prior
+  n_dim: 3
+  n_one_hot: 0
+  n_charges: 0
+
+batch_size: 56
+optimizer:
+  name: adam
+  lr: 0.001
+gradient_clip: 0.1
+max_epochs: 1000
+
+accelerator: "gpu"
+num_workers: 0

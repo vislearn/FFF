@@ -1,0 +1,38 @@
+model: fff.model.MoleculeFreeFormFlow
+
+data_set:
+  name: qm9
+  root: data
+n_features: 6
+
+# Activate for fine-tuning after 800 epochs
+# lr_scheduler:
+#   name: ExponentialLR
+#   gamma: 0.99
+#   interval: epoch
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 2000
+
+models:
+  - name: fff.model.ENGNN
+    n_dims: 3
+    latent_dim: data
+    n_features: 6
+    n_layers: 16
+
+latent_distribution:
+  name: position-feature-prior
+  n_dim: 3
+  n_one_hot: 5
+  n_charges: 1
+
+batch_size: 64
+optimizer:
+  name: adam
+  lr: 0.001
+max_epochs: 800 # stop after 700 epochs and restart with learning rate scheduler
+
+accelerator: "gpu"
+num_workers: 0

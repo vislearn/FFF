@@ -1,0 +1,41 @@
+model: fff.model.FreeFormFlow
+
+data_set:
+  name: dw4
+  root: data
+# n_features: 0
+
+lr_scheduler: "onecyclelr"
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 10
+
+models:
+  - name: fff.model.ENGNN
+    n_dims: 2
+    latent_dim: data
+    n_features: 0
+    n_layers: 20
+
+model_checkpoint:
+  monitor: validation/nll_dec
+  save_last: True
+  every_n_epochs: 25
+  save_top_k: 5
+
+latent_distribution:
+  name: position-feature-prior
+  n_dim: 2
+  n_one_hot: 0
+  n_charges: 0
+
+batch_size: 256
+optimizer:
+  name: adam
+  lr: 0.001
+gradient_clip: 1.0
+max_epochs: 50
+
+accelerator: "gpu"
+num_workers: 4

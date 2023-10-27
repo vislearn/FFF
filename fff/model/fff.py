@@ -11,6 +11,7 @@ from torch.nn import Sequential
 from fff.loss import nll_surrogate
 from fff.model.base import BaseModelHParams, BaseModel
 from fff.other_losses.exact_jac_det import log_det_exact
+from fff.evaluate.c2st import c2st
 
 LogProbResult = namedtuple("LogProbResult", ["z", "x1", "log_prob", "regularizations"])
 ConditionedBatch = namedtuple("ConditionedBatch", [
@@ -302,6 +303,17 @@ class FreeFormFlow(BaseModel):
             for key, value in self.val_data.compute_metrics(self).items():
                 self.log(f"validation/{key}", value)
         except AttributeError:
+            pass
+
+    def on_fit_end(self) -> None:
+        try:
+            if self.hparams.data_set["name"].startswith("sbi_"):
+                taskname = "_".join(self.hparams.data_set["name"].split("_")[1:])
+                c2st_accuracy = c2st(self, taskname)
+                self.logger.experiment.add_scalar("C2ST", c2st_accuracy, self.global_step)
+        except Exception as e:
+            # No need to give up a good run because of a plotting error
+            print(e)
             pass
 
     def apply_conditions(self, batch) -> ConditionedBatch:

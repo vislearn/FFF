@@ -13,3 +13,5 @@ git+https://github.com/LarsKue/lightning-trainable.git#lightning_trainable
 git+https://github.com/vislearn/FrEIA.git#FrEIA
 ninja
 ml-collections
+sbi
+sbibm

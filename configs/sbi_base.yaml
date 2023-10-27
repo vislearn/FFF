@@ -1,0 +1,35 @@
+model: fff.model.FreeFormFlow
+
+data_set:
+  # name: ... must be specified in separate config file
+  # num_simulations: ... must be specified in separate config file
+  root: data
+
+noise: 0.0
+
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 25
+
+models:
+  - name: fff.model.FullyConnectedNetwork
+    latent_dim: data
+    layer_spec: [ 256, 256 ]
+  - name: fff.model.ResNet
+    latent_dim: data
+    layers_spec:
+      - [ 256, 256 ]
+      - [ 256, 256 ]
+
+lr_scheduler: "onecyclelr"
+
+batch_size: 128
+optimizer:
+  name: adam
+  lr: 0.0005
+  weight_decay: 0.0001
+
+max_epochs: 200
+
+num_workers: 4

@@ -4,6 +4,7 @@ from .utils import TrainValTest
 from .tabular import get_tabular_datasets
 from .molecular import make_2d_atom_grid_datasets, load_qm9_dataset, load_dw4_dataset, load_lj13_dataset, \
     load_lj55_dataset
+from .sbi import get_sbi_dataset
 
 __all__ = ["load_dataset"]
 
@@ -28,5 +29,9 @@ def load_dataset(name: str, **kwargs) -> TrainValTest:
         return load_lj13_dataset(**kwargs)
     elif name == "lj55":
         return load_lj55_dataset(**kwargs)
+    elif name.startswith("sbi_"):
+        parts = name.split("_")
+        taskname = "_".join(parts[1:])
+        return get_sbi_dataset(name=taskname, **kwargs)
     else:
         return make_toy_data(name, **kwargs)

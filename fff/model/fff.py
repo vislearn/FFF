@@ -34,61 +34,6 @@ class FreeFormFlowHParams(BaseModelHParams):
 
     exact_chunk_size: None | int = None
 
-    def __init__(self, **hparams):
-        if "models" not in hparams:
-            if "latent_inn_spec" in hparams:
-                model_class = "fff.model.LatentFlow"
-                copy_keys = ["layer_spec", "latent_inn_spec", "detached_inn"]
-            elif "layers_spec" in hparams:
-                model_class = "fff.model.ResNet"
-                copy_keys = ["layers_spec", "latent_spec", "activation"]
-            elif "zero_init" in hparams:
-                model_class = "fff.model.SurFlow"
-                copy_keys = ["inn_spec", "zero_init"]
-            elif "latent_layer_spec" in hparams:
-                model_class = "fff.model.AutoEncoder"
-                copy_keys = [
-                    "layer_spec",
-                    "latent_layer_spec",
-                    "skip_connection",
-                    "detached_latent"
-                ]
-            elif "ch_factor" in hparams:
-                model_class = "fff.model.ConvAutoEncoder"
-                copy_keys = [
-                    "skip_connection",
-                    "ch_factor",
-                    "encoder_spec",
-                    "encoder_fc_spec",
-                    "decoder_fc_spec",
-                    "decoder_spec",
-                    "batch_norm",
-                ]
-            else:
-                model_class = copy_keys = None
-            if model_class is not None:
-                hparams["models"] = [{
-                    key: hparams.pop(key)
-                    for key in copy_keys + ["latent_dim"]
-                    if key in hparams
-                }]
-                hparams["models"][0]["name"] = model_class
-
-        if "log_det_estimator" in hparams and isinstance(hparams["log_det_estimator"], str):
-            hparams["log_det_estimator"] = dict(
-                log_det_estimator=hparams["log_det_estimator"],
-                trace_space=hparams.pop("trace_space", "latent"),
-                grad_to_enc_or_dec=hparams.pop("grad_to_enc_or_dec"),
-                grad_type=hparams.pop("grad_type"),
-                hutchinson_samples=hparams.pop("hutchinson_samples", 1),
-            )
-            if "detach_non_grad" in hparams:
-                hparams["log_det_estimator"]["detach_non_grad"] = hparams.pop("detach_non_grad")
-        if "detached_decoder" in hparams and not hparams["detached_decoder"]:
-            del hparams["detached_decoder"]
-
-        super().__init__(**hparams)
-
 
 class FreeFormFlow(BaseModel):
     """

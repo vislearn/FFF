@@ -3,8 +3,8 @@
 This is the official `PyTorch` implementation of [our preprint](http://arxiv.org/abs/2310.16624):
 
 ```bibtex
-@article{sorrenson2023maximum,
-    title = {Maximum Likelihood Training of Autoencoders},
+@article{draxler2023freeform,
+    title = {Free-form flows: Make Any Architecture a Normalizing Flow},
     author = {Draxler, Felix and Sorrenson, Peter and Rousselot, Armand and Zimmermann, Lea and Köthe, Ullrich},
     journal = {arXiv preprint arXiv:2310.16624},
     year = {2023}
@@ -15,7 +15,7 @@ The code is also compatible with Free-form injective flows (FIF), presented in [
 
 ```bibtex
 @article{sorrenson2023maximum,
-    title = {Lifting architectural constraints in injective normalizing flows},
+    title = {Lifting Architectural Constraints of Injective Flows},
     author = {Sorrenson, Peter and Draxler, Felix and Rousselot, Armand and Hummerich, Sander and Zimmermann, Lea and Köthe, Ullrich},
     journal = {arXiv preprint arXiv:2306.01843},
     year = {2023}

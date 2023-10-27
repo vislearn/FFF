@@ -52,77 +52,8 @@ def sample_v(x: torch.Tensor, hutchinson_samples: int):
     return q * sqrt(total_dim)
 
 
-def mat_mul_fns(x, forward):
-    def at_vec_fn(v):
-        """
-        Compute the Jacobian-vector product Jv using torch.autograd.grad.
-        """
-        x.requires_grad_(True)
-        y = forward(x)
-        jvp = torch.autograd.grad(outputs=y, inputs=x, grad_outputs=v, retain_graph=True, create_graph=True)[0]
-        return jvp.detach()
-
-    def a_vec_fn(v):
-        """
-        Compute the vector-Jacobian product v^T J.
-        """
-        x.requires_grad_(True)
-        # Using forward mode autodiff
-        with dual_level():
-            dual_x = make_dual(x, v)
-            dual_y = forward(dual_x)
-            y, vjp = unpack_dual(dual_y)
-
-        return vjp.detach()
-
-    return a_vec_fn, at_vec_fn
-
-
-def cg_normal_eq(b, x0, a_vec_fn, at_vec_fn, lambda_reg=0., max_iter=1000, tol=1e-6):
-    """
-    Conjugate Gradient (CG) method to solve the normal equations using given functions.
-
-    Parameters:
-    - b: Right-hand side tensor of shape (batch_size, m)
-    - a_vec_fn: Function to compute the product Ax for x of shape (batch_size, n)
-    - at_vec_fn: Function to compute the product A^T r for r of shape (batch_size, m)
-    - max_iter: Maximum number of iterations
-    - tol: Tolerance for convergence
-
-    Returns:
-    - x: Solution tensor of shape (batch_size, n)
-    - residuals: List of residuals for each iteration
-    """
-    # Compute ATb only once
-    ATb = at_vec_fn(b)
-    x = x0
-    r = ATb - (at_vec_fn(a_vec_fn(x)) + lambda_reg * x)
-    p = r
-
-    for _ in range(max_iter):
-        r_norm = torch.norm(r, dim=1)
-
-        if torch.max(r_norm) < tol:
-            break
-
-        Ap = at_vec_fn(a_vec_fn(p)) + lambda_reg * p
-
-        alpha = torch.sum(r * r, dim=1) / torch.sum(p * Ap, dim=1)
-        x = x + alpha.unsqueeze(1) * p
-        r_new = r - alpha.unsqueeze(1) * Ap
-
-        beta = torch.sum(r_new * r_new, dim=1) / torch.sum(r * r, dim=1)
-        p = r_new + beta.unsqueeze(1) * p
-
-        r = r_new
-
-    return x
-
-
 def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
-                  hutchinson_samples: int = 1,
-                  cg_n_iter: int = 0, cg_reg: float = 0.0,
-                  compute_landweber_step: bool = False) -> SurrogateOutput:
+                  hutchinson_samples: int = 1) -> SurrogateOutput:
     """
     Compute the per-sample surrogate for the negative log-likelihood and the volume change estimator.
     The gradient of the surrogate is the gradient of the actual negative log-likelihood.
@@ -136,11 +67,8 @@ def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
     x.requires_grad_()
     z = encode(x)
 
-    regularizations = {}
     v1s = []
     v2s = []
-    if cg_n_iter > 0:
-        regularizations["cg_g_guidance"] = 0
 
     surrogate = 0
     vs = sample_v(z, hutchinson_samples)
@@ -153,21 +81,6 @@ def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
             dual_x1 = decode(dual_z)
             x1, v1 = unpack_dual(dual_x1)
 
-        # Improve the estimate of $ f'(z)^+ v $ using CG
-        if cg_n_iter > 0:
-            a_vec_fn, at_vec_fn = mat_mul_fns(x, encode)
-            v1_0 = v1
-            v1 = cg_normal_eq(v, v1, a_vec_fn, at_vec_fn,
-                              lambda_reg=cg_reg, max_iter=cg_n_iter)
-
-            # Guide decoder closer to CG solution
-            regularizations["cg_g_guidance"] += sum_except_batch((v1.detach() - v1_0) ** 2)
-
-        # Do one Landweber step via decoder gradient descent
-        if compute_landweber_step:
-            a_vec_fn, at_vec_fn = mat_mul_fns(x, encode)
-            regularizations["landweber"] = sum_except_batch((v - a_vec_fn(v1)) ** 2)
-
         v1s.append(v1)
 
         # $ v^T f'(x) $ via backward-mode AD
@@ -177,32 +90,16 @@ def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
         # $ v^T f'(x) stop_grad(g'(z)) v $
         surrogate += sum_except_batch(v2 * v1.detach()) / hutchinson_samples
 
-    # In basis of v, f' g' should be the identity times d
-    regularizations["fg_orthogonality"] = 0.0
-    if hutchinson_samples > 1:
-        # f' g' should be symmetric
-        regularizations["fg_symmetry"] = 0.0
-    for i in range(len(v1s)):
-        for j in range(len(v2s)):
-            if i != j:
-                regularizations[f"fg_orthogonality"] += sum_except_batch(v1s[i] * v2s[j]) ** 2
-                if "fg_symmetry" in regularizations:
-                    dot_a = sum_except_batch(v1s[i] * v2s[j])
-                    dot_b = sum_except_batch(v2s[i] * v1s[j])
-                    regularizations["fg_symmetry"] += (dot_a - dot_b) ** 2
-            else:
-                regularizations[f"fg_orthogonality"] += (sum_except_batch(v1s[i] * v2s[i]) - z.shape[-1]) ** 2
-
     # Per-sample negative log-likelihood
     nll = sum_except_batch((z ** 2)) / 2 - surrogate
 
-    return SurrogateOutput(z, x1, nll, surrogate, regularizations)
+    return SurrogateOutput(z, x1, nll, surrogate, {})
 
 
 def fff_loss(x: torch.Tensor,
-              encode: Transform, decode: Transform,
-              beta: Union[float, torch.Tensor],
-              hutchinson_samples: int = 1) -> torch.Tensor:
+             encode: Transform, decode: Transform,
+             beta: Union[float, torch.Tensor],
+             hutchinson_samples: int = 1) -> torch.Tensor:
     """
     Compute the per-sample FFF/FIF loss:
     $$

@@ -91,7 +91,7 @@ for epoch in range(n_epochs):
 
 All training configurations from our papers can be found in the `configs/(fff|fif)` directories.
 
-Our training framework is built on https://github.com/LarsKue/lightning-trainable based on PyTorch Lightning. There is no `main.py`, but you can train all our models via the `lightning_trainable.launcher.fit` module.
+Our training framework is built on [lightning-trainable](https://github.com/LarsKue/lightning-trainable), a configuration wrapper around [PyTorch Lightning](https://lightning.ai/pytorch-lightning). There is no `main.py`, but you can train all our models via the `lightning_trainable.launcher.fit` module.
 For example, to train the Boltzmann generator on DW4:
 ```bash
 python -m lightning_trainable.launcher.fit configs/fff/dw4.yaml --name '{data_set[name]}'
@@ -119,7 +119,7 @@ python -m lightning_trainable.launcher.fit configs/dw4.yaml batch_size=128 loss_
 #### Known issues
 
 Training with $E(n)$-GNNs is sometimes unstable. This is usually caught with an assertion in a later step and training is stopped.
-In almost all cases, training can be stably resumed by passing the `--continue-from [CHECKPOINT]` flag to the training, such as:
+In almost all cases, training can be stably resumed from the last epoch checkpoint by passing the `--continue-from [CHECKPOINT]` flag to the training, such as:
 ```bash
 python -m lightning_trainable.launcher.fit configs/dw4.yaml --name '{data_set[name]}' --continue-from lightning_logs/dw4/version_0/checkpoints/last.ckpt
 ```

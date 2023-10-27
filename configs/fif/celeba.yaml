@@ -1,3 +1,5 @@
+# TODO adapt the configs presented in the paper
+
 model: fff.model.FreeFormInjectiveFlow
 
 noise: 0.01

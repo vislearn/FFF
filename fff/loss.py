@@ -25,7 +25,6 @@ from math import sqrt, prod
 from typing import Union, Callable
 
 import torch
-from FrEIA.utils import sum_except_batch
 from torch.autograd import grad
 from torch.autograd.forward_ad import dual_level, make_dual, unpack_dual
 
@@ -117,3 +116,12 @@ def fff_loss(x: torch.Tensor,
     surrogate = nll_surrogate(x, encode, decode, hutchinson_samples)
     mse = torch.sum((x - surrogate.x1) ** 2, dim=tuple(range(1, len(x.shape))))
     return beta * mse + surrogate.nll
+
+
+def sum_except_batch(x: torch.Tensor) -> torch.Tensor:
+    """
+    Sum over all dimensions except the first.
+    :param x: Input tensor.
+    :return: Sum over all dimensions except the first.
+    """
+    return torch.sum(x.reshape(x.shape[0], -1), dim=1)

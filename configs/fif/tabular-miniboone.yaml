@@ -1,0 +1,6 @@
+data_set.name: miniboone
+
+max_epochs: 175
+
+models.0.latent_dim: &latent_dim 21
+models.1.latent_dim: *latent_dim

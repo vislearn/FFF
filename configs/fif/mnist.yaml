@@ -1,0 +1,29 @@
+model: fff.model.FreeFormInjectiveFlow
+
+noise: 0.01
+data_set:
+  name: mnist
+  root: data
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 10
+max_epochs: 2000
+
+models:
+  - name: fff.model.ConvolutionalNeuralNetwork
+    latent_dim: &latent_dim 16
+    ch_factor: 32
+  - name: fff.model.ResNet
+    latent_dim: *latent_dim
+    layers_spec:
+      - [512, 512]
+      - [512, 512]
+      - [512, 512]
+      - [512, 512]
+
+optimizer:
+  name: adam
+  lr: 0.001
+
+batch_size: 512

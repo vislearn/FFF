@@ -1,0 +1,39 @@
+model: fff.model.FreeFormInjectiveFlow
+
+noise: 0.01
+data_set:
+  name: celeba
+  root: data
+  load_to_memory: true  # set to false if your RAM is not big enough
+
+skip_val_nll: 1 # Skip nll validation after first batch
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 10
+max_epochs: 200
+
+models:
+  - name: fff.model.ConvolutionalNeuralNetwork
+    latent_dim: &latent_dim 64
+    ch_factor: 128
+    decoder_spec:
+      - [ 8, 8 ]
+      # Channels, kernel size, stride, padding, output padding
+      - [ 4, 5, 2, 2 ]
+      - [ 2, 5, 2, 1 ]
+      - [ 1, 5, 2, 2, 1 ]
+      - [ 3, 5, 1, 1 ]
+  - name: fff.model.ResNet
+    latent_dim: *latent_dim
+    layers_spec:
+      - [256, 256]
+      - [256, 256]
+      - [256, 256]
+      - [256, 256]
+
+optimizer:
+  name: adam
+  lr: 0.001
+
+batch_size: 256

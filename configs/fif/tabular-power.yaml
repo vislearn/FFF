@@ -1,0 +1,6 @@
+data_set.name: power
+
+max_epochs: 3
+
+models.0.latent_dim: &latent_dim 3
+models.1.latent_dim: *latent_dim

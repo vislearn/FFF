@@ -1,0 +1,7 @@
+# Requires mnist.yaml
+
+# Remember to specify loss_weights.noisy_reconstruction from the command line
+
+data_set.conditional: True
+max_epochs: 400
+models.0.ch_factor: 128

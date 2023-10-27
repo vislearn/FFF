@@ -1,0 +1,6 @@
+data_set.name: hepmass
+
+max_epochs: 17
+
+models.0.latent_dim: &latent_dim 10
+models.1.latent_dim: *latent_dim

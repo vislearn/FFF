@@ -1,0 +1,15 @@
+pytest
+numpy
+scipy
+matplotlib
+scikit-learn
+tqdm
+pandas
+h5py
+torch
+torchvision
+torchmetrics
+git+https://github.com/LarsKue/lightning-trainable.git#lightning_trainable
+git+https://github.com/vislearn/FrEIA.git#FrEIA
+ninja
+ml-collections

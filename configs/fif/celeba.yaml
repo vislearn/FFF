@@ -1,5 +1,3 @@
-# TODO adapt the configs presented in the paper
-
 model: fff.model.FreeFormInjectiveFlow
 
 noise: 0.01
@@ -13,10 +11,11 @@ skip_val_nll: 1 # Skip nll validation after first batch
 loss_weights:
   nll: 1
   noisy_reconstruction: 10
-max_epochs: 200
+max_epochs: 200  # For the benchmark, we stop the process after 5 hours
 
 models:
   - name: fff.model.ConvolutionalNeuralNetwork
+    batch_norm: true
     latent_dim: &latent_dim 64
     ch_factor: 128
     decoder_spec:

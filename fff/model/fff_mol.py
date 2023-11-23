@@ -2,7 +2,7 @@
 import torch
 
 from fff.model.en_graph_utils.dequantize import ArgmaxAndVariationalDequantizer
-from fff.model.fff import FreeFormFlow, FreeFormFlowHParams
+from fff.fff import FreeFormFlow, FreeFormFlowHParams
 
 
 class MoleculeFreeFormFlowHParams(FreeFormFlowHParams):

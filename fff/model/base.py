@@ -16,7 +16,7 @@ from fff.data.multivariate_student_t import MultivariateStudentT
 from fff.loss import nll_surrogate
 from fff.model.en_graph_utils.position_feature_prior import PositionFeaturePrior
 from fff.model.utils import TrainWallClock
-from fff.other_losses.exact_jac_det import log_det_exact
+from fff.other_losses.exact_jac_det import compute_jacobian
 
 
 class ModelHParams(HParams):
@@ -49,6 +49,7 @@ class FreeFormBaseHParams(TrainableHParams):
 
 
 LogProbResult = namedtuple("LogProbResult", ["z", "x1", "log_prob", "regularizations"])
+VolumeChangeResult = namedtuple("VolumeChangeResult", ["out", "volume_change", "regularizations"])
 ConditionedBatch = namedtuple("ConditionedBatch", [
     "x0", "x_noisy", "loss_weights", "condition", "dequantization_jac"
 ])
@@ -210,50 +211,79 @@ class FreeFormBase(Trainable):
             z = model.decode(z, c)
         return z
 
+    def _encoder_jac(self, x, c, **kwargs):
+        return compute_jacobian(
+            x, self.encode, c,
+            chunk_size=self.hparams.exact_chunk_size,
+            **kwargs
+        )
+
+    def _decoder_jac(self, z, c, **kwargs):
+        return compute_jacobian(
+            z, self.decode, c,
+            chunk_size=self.hparams.exact_chunk_size,
+            **kwargs
+        )
+
+    def _encoder_volume_change(self, x, c, **kwargs) -> VolumeChangeResult:
+        raise NotImplementedError
+
+    def _decoder_volume_change(self, z, c, **kwargs) -> VolumeChangeResult:
+        raise NotImplementedError
+
     def forward(self, x, c):
         return self.decode(self.encode(x, c), c)
 
-    def log_prob(self, x, c, estimate=False, **kwargs) -> LogProbResult:
-        # Then compute JtJ
-        config = deepcopy(self.hparams.log_det_estimator)
-        estimator_name = config.pop("name")
-
-        if estimate:
-            kwargs.update(config)
-
-        if estimator_name == "exact" or not estimate:
-            out = log_det_exact(
-                x, self.encode, self.decode, c,
-                chunk_size=self.hparams.exact_chunk_size,
-                **kwargs,
-            )
-            volume_change = out.log_det
-        elif estimator_name == "surrogate":
-            out = nll_surrogate(
-                x,
-                lambda _x: self.encode(_x, c),
-                lambda z: self.decode(z, c),
-                **kwargs
-            )
-            volume_change = out.surrogate
-        else:
-            raise ValueError(f"Cannot understand log_det_estimator.name={estimator_name!r}")
-
-        # Compute log-likelihood
+    def _latent_log_prob(self, z, c):
         try:
-            # Try conditional latent distribution
-            latent_prob = self.get_latent(x.device).log_prob(out.z, c)
+            return self.get_latent(z.device).log_prob(z, c)
         except TypeError:
-            latent_prob = self.get_latent(x.device).log_prob(out.z)
+            return self.get_latent(z.device).log_prob(z)
 
-        # Add additional nll terms if available
-        for key, value in list(out.regularizations.items()):
+    def exact_log_prob(self, x, c, jacobian_target="decoder", **kwargs) -> LogProbResult:
+        metrics = {}
+
+        if jacobian_target in ["encoder", "both"]:
+            volume_change_enc = self._encoder_volume_change(x, c, **kwargs)
+            z = volume_change_enc.out
+            vol_change_enc = volume_change_enc.volume_change
+
+            metrics.update(volume_change_enc.regularizations)
+            metrics["vol_change_encoder"] = vol_change_enc
+        else:
+            z = self.encode(x, c)
+            vol_change_enc = None
+
+        if jacobian_target in ["decoder", "both"]:
+            volume_change_dec = self._encoder_volume_change(x, c, **kwargs)
+            x1 = volume_change_dec.out
+            vol_change_dec = -volume_change_dec.volume_change
+
+            metrics.update(volume_change_dec.regularizations)
+            metrics["vol_change_decoder"] = vol_change_dec
+        else:
+            x1 = self.decode(z, c)
+            vol_change_dec = None
+
+        if jacobian_target == "encoder":
+            volume_change = vol_change_enc
+        else:
+            # If "both" is specified, we prefer the decoder
+            volume_change = vol_change_dec
+
+        latent_log_prob = self._latent_log_prob(z, c)
+
+        # Add additional nll terms if requested
+        for key, value in list(metrics.items()):
             if key.startswith("vol_change_"):
-                out.regularizations[key.replace("vol_change_", "nll_")] = -(latent_prob + value)
+                metrics[key.replace("vol_change_", "nll_")] = -(latent_log_prob + value)
 
         return LogProbResult(
-            out.z, out.x1, latent_prob + volume_change, out.regularizations
+            z, x1, latent_log_prob + volume_change, metrics
         )
+
+    def surrogate_log_prob(self, x, c, **kwargs) -> LogProbResult:
+        raise NotImplementedError
 
     def compute_metrics(self, batch, batch_idx) -> dict:
         """

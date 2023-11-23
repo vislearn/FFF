@@ -57,7 +57,6 @@ def log_det_exact(x, encode, decode, *func_args,
         raise RuntimeError("Exact log det computation is only recommended in torch.no_grad() mode "
                            "as training may be unstable (see Section 4.2 in the FIF paper). "
                            "Set log_det_estimator.allow_gradient=True to allow computing gradients.")
-    jacfn = jacrev if grad_type == "backward" else jacfwd
 
     batch_size = x.shape[0]
     n_in_dim = prod(x.shape[1:])
@@ -67,10 +66,11 @@ def log_det_exact(x, encode, decode, *func_args,
 
     # Encoder jacobian if requested
     if jacobian_target in ["encoder", "both"]:
-        with torch.inference_mode(False):
-            with torch.no_grad():
-                jac_enc, z = vmap(jacfn(double_output(batch_wrap(partial(encode, **func_kwargs))), has_aux=True),
-                                  chunk_size=chunk_size)(x, *func_args)
+        jac_enc, z = compute_jacobian(
+            x, encode, *func_args,
+            chunk_size=chunk_size, grad_type=grad_type,
+            **func_kwargs
+        )
         n_out_dim = prod(z.shape[1:])
         jac_enc = jac_enc.reshape(batch_size, n_out_dim, n_in_dim)
     else:
@@ -80,10 +80,11 @@ def log_det_exact(x, encode, decode, *func_args,
 
     # Decoder jacobian if requested
     if jacobian_target in ["decoder", "both"]:
-        with torch.inference_mode(False):
-            with torch.no_grad():
-                jac_dec, x1 = vmap(jacfn(double_output(batch_wrap(partial(decode, **func_kwargs))), has_aux=True),
-                                   chunk_size=chunk_size)(z, *func_args)
+        jac_dec, x1 = compute_jacobian(
+            z, decode, *func_args,
+            chunk_size=chunk_size, grad_type=grad_type,
+            **func_kwargs
+        )
         jac_dec = jac_dec.reshape(batch_size, n_out_dim, n_in_dim)
     else:
         x1 = decode(z, *func_args, **func_kwargs)
@@ -91,10 +92,12 @@ def log_det_exact(x, encode, decode, *func_args,
 
     # Encoder is default if both are computed
     metrics = {}
+    vol_change = None
     if jac_dec is not None:
         vol_change = metrics["vol_change_dec"] = -compute_volume_change(jac_dec)
     if jac_enc is not None:
         vol_change = metrics["vol_change_enc"] = compute_volume_change(jac_enc)
+    assert vol_change is not None
 
     # Default NLL with unnormalized normal distribution
     nll = torch.sum((z.reshape(batch_size, n_out_dim) ** 2), -1) / 2 - vol_change

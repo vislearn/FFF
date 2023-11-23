@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from fff.loss import nll_surrogate
-from fff.model.base import FreeFormBaseHParams, FreeFormBase, LogProbResult
+from fff.base import FreeFormBaseHParams, FreeFormBase, LogProbResult
 
 
 class FreeFormFlowHParams(FreeFormBaseHParams):

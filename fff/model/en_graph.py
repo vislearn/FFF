@@ -5,7 +5,7 @@ from fff.model.en_graph_utils.egnn_qm9 import EGNN_dynamics_QM9
 from torch import nn
 from torch.nn import Module
 
-from .base import ModelHParams
+from fff.base import ModelHParams
 
 
 class ENGNNHParams(ModelHParams):

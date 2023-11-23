@@ -4,7 +4,7 @@ import torch.nn
 from torch import nn
 
 from .auto_encoder import SkipConnection
-from .base import ModelHParams
+from fff.base import ModelHParams
 from .utils import wrap_batch_norm1d, make_dense
 
 

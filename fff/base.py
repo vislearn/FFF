@@ -13,10 +13,9 @@ from torch.utils.data import DataLoader, IterableDataset
 
 import fff.data
 from fff.data.multivariate_student_t import MultivariateStudentT
-from fff.loss import nll_surrogate
 from fff.model.en_graph_utils.position_feature_prior import PositionFeaturePrior
 from fff.model.utils import TrainWallClock
-from fff.other_losses.exact_jac_det import compute_jacobian
+from fff.utils.jacobian import compute_jacobian
 
 
 class ModelHParams(HParams):
@@ -82,7 +81,13 @@ class FreeFormBase(Trainable):
                 if len(data_sample[1].shape) != 1:
                     raise NotImplementedError("More than one condition dimension is not supported.")
                 self._data_cond_dim = data_sample[1].shape[0]
+        # Learnt latent distribution
         self.latents = {}
+        default_latent = self.get_latent(self.device)
+        if isinstance(default_latent, torch.nn.Module):
+            self.learnt_latent = default_latent
+
+        # Build model
         self.models = build_model(self.hparams.models, self.data_dim, self.cond_dim)
 
     def train_dataloader(self) -> DataLoader | list[DataLoader]:
@@ -240,19 +245,39 @@ class FreeFormBase(Trainable):
         except TypeError:
             return self.get_latent(z.device).log_prob(z)
 
-    def exact_log_prob(self, x, c, jacobian_target="decoder", **kwargs) -> LogProbResult:
+    def sample(self, sample_shape, condition=None):
+        """
+        Sample via the decoder.
+        """
+        z = self.get_latent(self.device).sample(sample_shape)
+        z = z.reshape(prod(sample_shape), *z.shape[len(sample_shape):])
+        batch = [z]
+        if condition is not None:
+            batch.append(condition)
+        c = self.apply_conditions(batch).condition
+        x = self.decode(z, c)
+        return x.reshape(sample_shape + x.shape[1:])
+
+    def exact_log_prob(self, x, c, jacobian_target="decoder",
+                       input_is_z=False, **kwargs) -> LogProbResult:
         metrics = {}
 
-        if jacobian_target in ["encoder", "both"]:
-            volume_change_enc = self._encoder_volume_change(x, c, **kwargs)
-            z = volume_change_enc.out
-            vol_change_enc = volume_change_enc.volume_change
-
-            metrics.update(volume_change_enc.regularizations)
-            metrics["vol_change_encoder"] = vol_change_enc
-        else:
-            z = self.encode(x, c)
+        if input_is_z:
+            if jacobian_target != "decoder":
+                raise NotImplementedError("Cannot compute encoder Jacobian for z input.")
+            z = x
             vol_change_enc = None
+        else:
+            if jacobian_target in ["encoder", "both"]:
+                volume_change_enc = self._encoder_volume_change(x, c, **kwargs)
+                z = volume_change_enc.out
+                vol_change_enc = volume_change_enc.volume_change
+
+                metrics.update(volume_change_enc.regularizations)
+                metrics["vol_change_encoder"] = vol_change_enc
+            else:
+                z = self.encode(x, c)
+                vol_change_enc = None
 
         if jacobian_target in ["decoder", "both"]:
             volume_change_dec = self._encoder_volume_change(x, c, **kwargs)

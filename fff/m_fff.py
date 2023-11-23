@@ -1,7 +1,7 @@
 from math import prod
 import torch
 
-from fff.model.base import FreeFormBase, FreeFormBaseHParams, VolumeChangeResult
+from fff.base import FreeFormBase, FreeFormBaseHParams, VolumeChangeResult
 
 
 class ManifoldFreeFormFlowHParams(FreeFormBaseHParams):
@@ -52,6 +52,13 @@ class ManifoldFreeFormFlow(FreeFormBase):
         projected = project_to_manifold(jac_enc, x1, z, self.manifold)
         log_det = projected.slogdet()[1]
         return VolumeChangeResult(z, log_det, {})
+
+    def dequantize(self, batch):
+        dequantize_out = super().dequantize(batch)
+        if dequantize_out[1] is not batch[0]:
+            x_projected = self.manifold.projection(batch[1])
+            dequantize_out = (dequantize_out[0], x_projected, *dequantize_out[2:])
+        return dequantize_out
 
 
 def project_to_manifold(jac, x_in, x_out, manifold):

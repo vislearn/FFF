@@ -4,7 +4,7 @@ import torch.nn
 from torch import nn
 from torch.nn import Module
 
-from .base import ModelHParams
+from fff.base import ModelHParams
 from fff.model.utils import make_dense
 
 

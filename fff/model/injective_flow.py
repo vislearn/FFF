@@ -1,7 +1,7 @@
 import torch.nn
 from torch import nn
 
-from .base import ModelHParams
+from fff.base import ModelHParams
 from .utils import batch_wrap, make_inn
 
 

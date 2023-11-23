@@ -106,7 +106,7 @@ When training has finished, you can import the model via
 ```python
 import fff
 
-model = fff.model.FreeFormFlow.load_from_checkpoint(
+model = fff.FreeFormFlow.load_from_checkpoint(
     'lightning_logs/dw4/version_0/checkpoints/last.ckpt'
 )
 ```

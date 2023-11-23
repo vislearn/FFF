@@ -1,4 +1,4 @@
-model: fff.model.FreeFormFlow
+model: fff.FreeFormFlow
 
 data_set:
   name: lj55

@@ -5,15 +5,15 @@ from math import prod, log10
 
 import torch
 from lightning_trainable import Trainable, TrainableHParams
-from FrEIA.distributions import StandardNormalDistribution
 from lightning_trainable.hparams import HParams
 from lightning_trainable.trainable.trainable import auto_pin_memory, SkipBatch
+from torch.distributions import Independent, Normal
 from torch.nn import Sequential
 from torch.utils.data import DataLoader, IterableDataset
 
 import fff.data
-from fff.data.multivariate_student_t import MultivariateStudentT
-from fff.model.en_graph_utils.position_feature_prior import PositionFeaturePrior
+from fff.distributions.multivariate_student_t import MultivariateStudentT
+from fff.loss import nll_surrogate
 from fff.model.utils import TrainWallClock
 from fff.utils.jacobian import compute_jacobian
 
@@ -81,14 +81,15 @@ class FreeFormBase(Trainable):
                 if len(data_sample[1].shape) != 1:
                     raise NotImplementedError("More than one condition dimension is not supported.")
                 self._data_cond_dim = data_sample[1].shape[0]
+
+        # Build model
+        self.models = build_model(self.hparams.models, self.data_dim, self.cond_dim)
+
         # Learnt latent distribution
         self.latents = {}
         default_latent = self.get_latent(self.device)
         if isinstance(default_latent, torch.nn.Module):
             self.learnt_latent = default_latent
-
-        # Build model
-        self.models = build_model(self.hparams.models, self.data_dim, self.cond_dim)
 
     def train_dataloader(self) -> DataLoader | list[DataLoader]:
         """
@@ -157,27 +158,28 @@ class FreeFormBase(Trainable):
         )
 
     def get_latent(self, device):
+        # Learnable distributions should just be moved to the right device, so that parameters are shared
+        if self.latents and isinstance(next(iter(self.latents.values())), torch.nn.Module):
+            return next(iter(self.latents.values())).to(device)
+
         if device not in self.latents:
             latent_hparams = deepcopy(self.hparams.latent_distribution)
             distribution_name = latent_hparams.pop("name")
-            if distribution_name == "normal":
-                self.latents[device] = StandardNormalDistribution(self.latent_dim, device=device)
-            elif distribution_name == "student_t":
-                df = self.hparams.latent_distribution["df"] * torch.ones(1, device=device)
-                self.latents[device] = MultivariateStudentT(df, self.latent_dim)
-            elif distribution_name == "position-feature-prior":
-                from fff.data.qm9.models import DistributionNodes
-                try:
-                    nodes_dist = DistributionNodes(self.train_data.node_counts)
-                except AttributeError:
-                    # TODO
-                    nodes_dist = DistributionNodes({
-                        4: 1
-                    })
-                self.latents[device] = PositionFeaturePrior(**latent_hparams, nodes_dist=nodes_dist, device=device)
-            else:
-                raise ValueError(f"Unknown latent distribution: {self.hparams.latent_distribution['name']}")
-        return self.latents[device]
+            self.latents[device] = self._make_latent(distribution_name, device, **latent_hparams)
+
+    def _make_latent(self, name, device, **kwargs):
+        if name == "normal":
+            loc = torch.zeros(self.latent_dim, device=device)
+            scale = torch.ones(self.latent_dim, device=device)
+
+            return Independent(
+                Normal(loc, scale), self.latent_dim,
+            )
+        elif name == "student_t":
+            df = self.hparams.latent_distribution["df"] * torch.ones(1, device=device)
+            return MultivariateStudentT(df, self.latent_dim)
+        else:
+            raise ValueError(f"Unknown latent distribution: {name!r}")
 
     @property
     def latent_dim(self):
@@ -307,8 +309,28 @@ class FreeFormBase(Trainable):
             z, x1, latent_log_prob + volume_change, metrics
         )
 
+
     def surrogate_log_prob(self, x, c, **kwargs) -> LogProbResult:
-        raise NotImplementedError
+        # Then compute JtJ
+        config = deepcopy(self.hparams.log_det_estimator)
+        estimator_name = config.pop("name")
+        assert estimator_name == "surrogate"
+
+        out = nll_surrogate(
+            x,
+            lambda _x: self.encode(_x, c),
+            lambda z: self.decode(z, c),
+            **kwargs
+        )
+        volume_change = out.surrogate
+
+        latent_prob = self._latent_log_prob(out.z, c)
+        return LogProbResult(
+            out.z, out.x1, latent_prob + volume_change, out.regularizations
+        )
+
+    def _reconstruction_loss(self, a, b):
+        return torch.sum((a - b).reshape(a.shape[0], -1) ** 2, -1)
 
     def compute_metrics(self, batch, batch_idx) -> dict:
         """
@@ -359,7 +381,7 @@ class FreeFormBase(Trainable):
                     and batch_idx < self.hparams.skip_val_nll
             ))):
                 with torch.no_grad():
-                    log_prob_result = self.log_prob(x=x, c=c, jacobian_target="both")
+                    log_prob_result = self.exact_log_prob(x=x, c=c, jacobian_target="both")
                 z = log_prob_result.z
                 x1 = log_prob_result.x1
                 loss_values[key] = -log_prob_result.log_prob - deq_vol_change
@@ -384,7 +406,7 @@ class FreeFormBase(Trainable):
                 )
             loss_weights["nll"] *= nll_warmup
             if check_keys("nll"):
-                log_prob_result = self.log_prob(x=x, c=c, estimate=True)
+                log_prob_result = self.surrogate_log_prob(x=x, c=c)
                 z = log_prob_result.z
                 x1 = log_prob_result.x1
                 loss_values["nll"] = -log_prob_result.log_prob - deq_vol_change
@@ -409,21 +431,21 @@ class FreeFormBase(Trainable):
 
         # Reconstruction
         if not self.training or check_keys("reconstruction", "noisy_reconstruction"):
-            loss_values["reconstruction"] = reconstruction_loss(x0, x1)
-            loss_values["noisy_reconstruction"] = reconstruction_loss(x, x1)
+            loss_values["reconstruction"] = self._reconstruction_loss(x0, x1)
+            loss_values["noisy_reconstruction"] = self.reconstruction_loss(x, x1)
 
         # Cyclic consistency of latent code
         if not self.training or check_keys("z_reconstruction"):
             # Not reusing x1 from above, as it does not detach z
             z1 = self.encode(x1, c)
-            loss_values["z_reconstruction"] = reconstruction_loss(z, z1)
+            loss_values["z_reconstruction"] = self._reconstruction_loss(z, z1)
 
         # Cyclic consistency of latent code -- gradient only to encoder
         if not self.training or check_keys("z_reconstruction_encoder"):
             # Not reusing x1 from above, as it does not detach z
             x1_detached = x1.detach()
             z1 = self.encode(x1_detached, c)
-            loss_values["z_reconstruction_encoder"] = reconstruction_loss(z, z1)
+            loss_values["z_reconstruction_encoder"] = self._reconstruction_loss(z, z1)
 
         # Cyclic consistency of latent code sampled from Gauss
         if not self.training or check_keys("gauss_z_reconstruction"):
@@ -432,7 +454,7 @@ class FreeFormBase(Trainable):
             # work for all data noises
             x_sample = self.decode(z_gauss, c)
             z_gauss1 = self.encode(x_sample, c)
-            loss_values["gauss_z_reconstruction"] = reconstruction_loss(z_gauss, z_gauss1)
+            loss_values["gauss_z_reconstruction"] = self._reconstruction_loss(z_gauss, z_gauss1)
 
         # Reconstruction of Gauss with double std -- for invertibility
         if not self.training or check_keys("gauss_reconstruction"):
@@ -441,7 +463,7 @@ class FreeFormBase(Trainable):
             try:
                 z_gauss = self.encode(x_gauss, c)
                 x_gauss1 = self.decode(z_gauss, c)
-                loss_values["gauss_reconstruction"] = reconstruction_loss(x_gauss, x_gauss1)
+                loss_values["gauss_reconstruction"] = self._reconstruction_loss(x_gauss, x_gauss1)
             except AssertionError:
                 loss_values["gauss_reconstruction"] = float("nan") * torch.ones(x.shape[0])
 
@@ -451,7 +473,7 @@ class FreeFormBase(Trainable):
             x_shuffled = x[torch.randperm(x.shape[0])]
             z_shuffled = self.encode(x_shuffled, c)
             x_shuffled1 = self.decode(z_shuffled, c)
-            loss_values["shuffled_reconstruction"] = reconstruction_loss(x_shuffled, x_shuffled1)
+            loss_values["shuffled_reconstruction"] = self._reconstruction_loss(x_shuffled, x_shuffled1)
 
         # Compute loss as weighted loss
         metrics["loss"] = sum(
@@ -477,25 +499,6 @@ class FreeFormBase(Trainable):
                 if not torch.is_tensor(weight):
                     weight = torch.tensor(weight)
                 self.log(f"weights/{key}", weight.float().mean())
-
-        # $Je Jd = I$ assumption on manifold
-        if not self.training and batch_idx == 0 and False:
-            # This should be a vmapped jacfwd, but it is not implemented for vmap for our model
-            Jd = torch.stack([
-                torch.func.jacfwd(self.decode)(zi, ci)
-                for zi, ci in zip(z, c)
-            ])
-
-            x1 = self.decode(z, c)
-            Je = torch.func.vmap(torch.func.jacrev(self.encode))(x1, c)
-            JJt = torch.bmm(Je, Jd)
-
-            orthogonality = reconstruction_loss(
-                torch.eye(JJt.shape[-1], device=x.device).reshape(-1).unsqueeze(0),
-                JJt.reshape(x.shape[0], -1)
-            )
-            metrics["orthogonality"] = orthogonality.mean()
-            metrics["orthogonality-std"] = orthogonality.std()
 
         # Check finite loss
         if not torch.isfinite(metrics["loss"]) and self.training:
@@ -617,10 +620,6 @@ def soft_heaviside(pos, start, stop):
         /
         (stop - start)
     ))
-
-
-def reconstruction_loss(a, b):
-    return ((a - b) ** 2).reshape(a.shape[0], -1).sum(-1)
 
 
 def rand_log_uniform(vmin, vmax, shape, device, dtype):

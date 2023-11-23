@@ -22,8 +22,30 @@ class ManifoldFreeFormFlow(FreeFormBase):
         if not hasattr(self.train_data, "manifold"):
             raise ValueError("ManifoldFreeFormFlow requires a manifold to be specified in the train data.")
 
-        self.manifold = self.train_data.manifold
-        assert self.manifold.projection is not None
+        if self.manifold is None:
+            raise ValueError("ManifoldFreeFormFlow requires a manifold to be specified in the train data.")
+        if self.manifold.projection is None:
+            raise ValueError("ManifoldFreeFormFlow requires a projection to be specified in the manifold.")
+
+    @property
+    def manifold(self):
+        return self.train_data.manifold
+
+    def _make_latent(self, name, device, **kwargs):
+        if not name.startswith("manifold"):
+            raise ValueError("You have to use a manifold distribution when training on a manifold.")
+        if name == "manifold-uniform":
+            from fff.distributions.manifold_uniform import ManifoldUniformDistribution
+            return ManifoldUniformDistribution(self.manifold, self.latent_dim, device=device)
+        elif name == "manifold-von-mises-fisher":
+            if "num_components" in kwargs.keys():
+                n_modes = kwargs.pop("num_components")
+                kwargs["n_modes"] = n_modes
+            from fff.distributions.von_mises_fisher import VonMisesFisherMixtureDistribution
+            with torch.inference_mode(False):
+                return VonMisesFisherMixtureDistribution(self.manifold, **kwargs)
+        else:
+            raise ValueError(f"Unknown latent distribution: {name!r}")
 
     def encode(self, x, c, project=True, project_x=False):
         if project_x:
@@ -42,7 +64,7 @@ class ManifoldFreeFormFlow(FreeFormBase):
         return x
 
     def _encoder_volume_change(self, x, c, **kwargs) -> VolumeChangeResult:
-        z, jac_enc = self._encoder_jacobian(x, c, **kwargs)
+        z, jac_enc = self._encoder_jac(x, c, **kwargs)
         projected = project_to_manifold(jac_enc, x, z, self.manifold)
         log_det = projected.slogdet()[1]
         return VolumeChangeResult(z, log_det, {})
@@ -59,6 +81,11 @@ class ManifoldFreeFormFlow(FreeFormBase):
             x_projected = self.manifold.projection(batch[1])
             dequantize_out = (dequantize_out[0], x_projected, *dequantize_out[2:])
         return dequantize_out
+
+    def _reconstruction_loss(self, a, b):
+        if self.hparams.manifold_distance:
+            return self.manifold.metric.squared_dist(a, b)
+        return super()._reconstruction_loss(a, b)
 
 
 def project_to_manifold(jac, x_in, x_out, manifold):

@@ -1,4 +1,4 @@
-model: mlae.model.MaximumLikelihoodAutoencoder
+model: fff.ManifoldFreeFormFlow
 accelerator: gpu
 
 data_set:

@@ -33,5 +33,8 @@ def load_dataset(name: str, **kwargs) -> TrainValTest:
         parts = name.split("_")
         taskname = "_".join(parts[1:])
         return get_sbi_dataset(name=taskname, **kwargs)
+    elif name == "special-orthogonal":
+        from fff.data.special_orthogonal import make_so_data
+        return make_so_data(**kwargs)
     else:
         return make_toy_data(name, **kwargs)

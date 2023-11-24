@@ -52,7 +52,7 @@ def sample_v(x: torch.Tensor, hutchinson_samples: int):
 
 
 def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
-                  hutchinson_samples: int = 1) -> SurrogateOutput:
+                  hutchinson_samples: int = 1, manifold=None) -> SurrogateOutput:
     """
     Compute the per-sample surrogate for the negative log-likelihood and the volume change estimator.
     The gradient of the surrogate is the gradient of the actual negative log-likelihood.
@@ -61,16 +61,25 @@ def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
     :param encode: Encoder function. Takes `x` as input and returns a latent representation of shape (batch_size, latent_dim).
     :param decode: Decoder function. Takes a latent representation of shape (batch_size, latent_dim) as input and returns a reconstruction of shape (batch_size, ...).
     :param hutchinson_samples: Number of Hutchinson samples to use for the volume change estimator.
+    :param manifold: Manifold on which the latent space lies. If provided, the volume change is computed on the manifold.
     :return: Per-sample loss. Shape: (batch_size,)
     """
     x.requires_grad_()
     z = encode(x)
 
-    v1s = []
-    v2s = []
+    metrics = {}
+    # M-FFF: Project to manifold and store projection distance for regularization
+    if manifold is not None:
+        from fff.m_loss import project_z
+        z, metrics["z_projection"] = project_z(z, manifold)
 
     surrogate = 0
-    vs = sample_v(z, hutchinson_samples)
+    if manifold is None:
+        vs = sample_v(z, hutchinson_samples)
+    else:
+        # M-FFF: Sample v in the tangent space of z
+        from fff.m_loss import sample_v_in_tangent
+        vs = sample_v_in_tangent(z, hutchinson_samples, manifold)
     for k in range(hutchinson_samples):
         v = vs[..., k]
 
@@ -78,13 +87,16 @@ def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
         with dual_level():
             dual_z = make_dual(z, v)
             dual_x1 = decode(dual_z)
-            x1, v1 = unpack_dual(dual_x1)
 
-        v1s.append(v1)
+            # M-FFF: Project to manifold and store projection distance for regularization
+            if manifold is not None:
+                from fff.m_loss import project_x1
+                dual_x1, metrics["x1_projection"] = project_x1(dual_x1, manifold)
+
+            x1, v1 = unpack_dual(dual_x1)
 
         # $ v^T f'(x) $ via backward-mode AD
         v2, = grad(z, x, v, create_graph=True)
-        v2s.append(v2)
 
         # $ v^T f'(x) stop_grad(g'(z)) v $
         surrogate += sum_except_batch(v2 * v1.detach()) / hutchinson_samples
@@ -92,7 +104,7 @@ def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
     # Per-sample negative log-likelihood
     nll = sum_except_batch((z ** 2)) / 2 - surrogate
 
-    return SurrogateOutput(z, x1, nll, surrogate, {})
+    return SurrogateOutput(z, x1, nll, surrogate, metrics)
 
 
 def fff_loss(x: torch.Tensor,

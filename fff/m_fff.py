@@ -1,7 +1,9 @@
+from copy import deepcopy
 from math import prod
 import torch
 
-from fff.base import FreeFormBase, FreeFormBaseHParams, VolumeChangeResult
+from fff.base import FreeFormBase, FreeFormBaseHParams, VolumeChangeResult, LogProbResult
+from fff.loss import nll_surrogate
 
 
 class ManifoldFreeFormFlowHParams(FreeFormBaseHParams):
@@ -65,15 +67,35 @@ class ManifoldFreeFormFlow(FreeFormBase):
 
     def _encoder_volume_change(self, x, c, **kwargs) -> VolumeChangeResult:
         z, jac_enc = self._encoder_jac(x, c, **kwargs)
-        projected = project_to_manifold(jac_enc, x, z, self.manifold)
+        projected = project_jac_to_manifold(jac_enc, x, z, self.manifold)
         log_det = projected.slogdet()[1]
         return VolumeChangeResult(z, log_det, {})
 
     def _decoder_volume_change(self, z, c, **kwargs) -> VolumeChangeResult:
         x1, jac_enc = self._decoder_jac(z, c, **kwargs)
-        projected = project_to_manifold(jac_enc, x1, z, self.manifold)
+        projected = project_jac_to_manifold(jac_enc, x1, z, self.manifold)
         log_det = projected.slogdet()[1]
         return VolumeChangeResult(z, log_det, {})
+
+    def surrogate_log_prob(self, x, c, **kwargs) -> LogProbResult:
+        # Then compute JtJ
+        config = deepcopy(self.hparams.log_det_estimator)
+        estimator_name = config.pop("name")
+        assert estimator_name == "surrogate"
+
+        out = nll_surrogate(
+            x,
+            lambda _x: self.encode(_x, c, project=False),
+            lambda z: self.decode(z, c, project=False),
+            manifold=self.manifold,
+            **kwargs
+        )
+        volume_change = out.surrogate
+
+        latent_prob = self._latent_log_prob(out.z, c)
+        return LogProbResult(
+            out.z, out.x1, latent_prob + volume_change, out.regularizations
+        )
 
     def dequantize(self, batch):
         dequantize_out = super().dequantize(batch)
@@ -88,7 +110,7 @@ class ManifoldFreeFormFlow(FreeFormBase):
         return super()._reconstruction_loss(a, b)
 
 
-def project_to_manifold(jac, x_in, x_out, manifold):
+def project_jac_to_manifold(jac, x_in, x_out, manifold):
     bases = []
     # Compute a basis each for x, z, and x1
     for pos in [x_in, x_out]:
@@ -102,9 +124,12 @@ def project_to_manifold(jac, x_in, x_out, manifold):
         bases.append(basis)
     x_in_basis, x_out_basis = bases
 
-    # Project the encoder Jacobian
+    # Project the Jacobian after reshaping to bs x out_dim x in_dim
+    x_in_dim = prod(x_in.shape[1:])
+    x_out_dim = prod(x_out.shape[1:])
+    jac_vec = jac.reshape(jac.shape[0], x_out_dim, x_in_dim)
     return torch.bmm(
-        torch.bmm(x_out_basis.transpose(-1, -2), jac),
+        torch.bmm(x_out_basis.transpose(-1, -2), jac_vec),
         x_in_basis
     )
 

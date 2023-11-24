@@ -3,3 +3,4 @@ from .conv_auto_encoder import ConvolutionalNeuralNetwork, ConvolutionalNeuralNe
 from .injective_flow import InjectiveFlow, InjectiveFlowHParams
 from .res_net import ResNet, ResNetHParams
 from .en_graph import ENGNN, ENGNNH, ENGNNHParams
+from .matrix_flatten import MatrixFlatten, MatrixFlattenHParams

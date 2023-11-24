@@ -11,8 +11,8 @@ data_set:
 loss_weights:
   noisy_reconstruction: 500
   nll: 1
-  z_projection_distance: 10
-  x1_projection_distance: 10
+  z_projection: 10
+  x1_projection: 10
   x_sample_reconstruction: 10
   z_sample_reconstruction: 10
 
@@ -21,23 +21,21 @@ exact_train_nll_every: 10
 
 # models.0.latent_dim: 2
 models:
-  - name: mlae.model.MatrixFlatten
-    latent_dim: data
-  - name: mlae.model.ResNet
+  - name: fff.model.MatrixFlatten
+  - name: fff.model.ResNet
     # layers_spec: [ [ 64, 64 ], [ 64, 64 ] ]
     layers_spec:
       - [ 512, 512, 512, 512, 512 ]
       - [ 512, 512, 512, 512, 512 ]
       #- [ 512, 512, 512, 512, 512 ]
       #- [ 512, 512, 512, 512, 512 ]
-    latent_dim: data
-  - name: mlae.model.MatrixFlatten
+  - name: fff.model.MatrixFlatten
     reverse: true
-    latent_dim: data
 
 lr_scheduler:
   name: ExponentialLR
-  gamma: 0.99999
+  kwargs:
+    gamma: 0.99999
   interval: step
 max_epochs: 60
 batch_size: 1024
@@ -51,3 +49,4 @@ optimizer:
   weight_decay: 0.00001
 
 gradient_clip: 1
+num_workers: 0

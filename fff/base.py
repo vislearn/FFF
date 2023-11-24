@@ -165,7 +165,11 @@ class FreeFormBase(Trainable):
         if device not in self.latents:
             latent_hparams = deepcopy(self.hparams.latent_distribution)
             distribution_name = latent_hparams.pop("name")
-            self.latents[device] = self._make_latent(distribution_name, device, **latent_hparams)
+            latent = self._make_latent(distribution_name, device, **latent_hparams)
+            assert latent is not None, (f"Found None latent distribution (code not config error) "
+                                        f"for name {distribution_name}.")
+            self.latents[device] = latent
+        return self.latents[device]
 
     def _make_latent(self, name, device, **kwargs):
         if name == "normal":
@@ -282,7 +286,7 @@ class FreeFormBase(Trainable):
                 vol_change_enc = None
 
         if jacobian_target in ["decoder", "both"]:
-            volume_change_dec = self._encoder_volume_change(x, c, **kwargs)
+            volume_change_dec = self._decoder_volume_change(x, c, **kwargs)
             x1 = volume_change_dec.out
             vol_change_dec = -volume_change_dec.volume_change
 
@@ -432,7 +436,7 @@ class FreeFormBase(Trainable):
         # Reconstruction
         if not self.training or check_keys("reconstruction", "noisy_reconstruction"):
             loss_values["reconstruction"] = self._reconstruction_loss(x0, x1)
-            loss_values["noisy_reconstruction"] = self.reconstruction_loss(x, x1)
+            loss_values["noisy_reconstruction"] = self._reconstruction_loss(x, x1)
 
         # Cyclic consistency of latent code
         if not self.training or check_keys("z_reconstruction"):
@@ -448,24 +452,25 @@ class FreeFormBase(Trainable):
             loss_values["z_reconstruction_encoder"] = self._reconstruction_loss(z, z1)
 
         # Cyclic consistency of latent code sampled from Gauss
-        if not self.training or check_keys("gauss_z_reconstruction"):
-            z_gauss = torch.randn_like(z)
-            # We re-use the data noise distribution here, reconstruction should
-            # work for all data noises
-            x_sample = self.decode(z_gauss, c)
-            z_gauss1 = self.encode(x_sample, c)
-            loss_values["gauss_z_reconstruction"] = self._reconstruction_loss(z_gauss, z_gauss1)
+        if not self.training or check_keys("z_sample_reconstruction"):
+            z_random = self.get_latent(z.device).sample((z.shape[0],))
+            try:
+                # Sanity checks might fail for random data
+                z1_random = self.encode(self.decode(z_random, c), c)
+                loss_values["z_sample_reconstruction"] = self._reconstruction_loss(z_random, z1_random)
+            except:
+                loss_values["z_sample_reconstruction"] = float("nan") * torch.ones(z_random.shape[0])
 
         # Reconstruction of Gauss with double std -- for invertibility
-        if not self.training or check_keys("gauss_reconstruction"):
+        if not self.training or check_keys("x_sample_reconstruction"):
             # As we only care about the reconstruction, can ignore noise scale
-            x_gauss = 2 * torch.randn_like(x)
+            x_random = self.get_latent(z.device).sample((z.shape[0],))
             try:
-                z_gauss = self.encode(x_gauss, c)
-                x_gauss1 = self.decode(z_gauss, c)
-                loss_values["gauss_reconstruction"] = self._reconstruction_loss(x_gauss, x_gauss1)
-            except AssertionError:
-                loss_values["gauss_reconstruction"] = float("nan") * torch.ones(x.shape[0])
+                # Sanity checks might fail for random data
+                x1_random = self.decode(self.encode(x_random, c), c)
+                loss_values["x_sample_reconstruction"] = self._reconstruction_loss(x_random, x1_random)
+            except:
+                loss_values["x_sample_reconstruction"] = float("nan") * torch.ones(x_random.shape[0])
 
         # Reconstruction of Gauss with double std -- for invertibility
         if not self.training or check_keys("shuffled_reconstruction"):

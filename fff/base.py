@@ -286,7 +286,7 @@ class FreeFormBase(Trainable):
                 vol_change_enc = None
 
         if jacobian_target in ["decoder", "both"]:
-            volume_change_dec = self._decoder_volume_change(x, c, **kwargs)
+            volume_change_dec = self._decoder_volume_change(z, c, **kwargs)
             x1 = volume_change_dec.out
             vol_change_dec = -volume_change_dec.volume_change
 
@@ -312,7 +312,6 @@ class FreeFormBase(Trainable):
         return LogProbResult(
             z, x1, latent_log_prob + volume_change, metrics
         )
-
 
     def surrogate_log_prob(self, x, c, **kwargs) -> LogProbResult:
         # Then compute JtJ

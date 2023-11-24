@@ -20,6 +20,15 @@ This is the official `PyTorch` implementation for our preprints:
         year = {2023}
     }
     ```
+3. Learning Distributions on Manifolds with Free-form Flows on learning distributions on a known manifold:
+    ```bibtex
+    @article{sorrenson2023learning,
+        title = {Learning Distributions on Manifolds with Free-form Flows},
+        author = {Sorrenson, Peter and Draxler, Felix and Rousselot, Armand and Hummerich, Sander and Köthe, Ullrich},
+        journal = {unpublished},
+        year = {2023}
+    }
+    ```
 
 
 ## Installation

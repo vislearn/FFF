@@ -72,10 +72,10 @@ class ManifoldFreeFormFlow(FreeFormBase):
         return VolumeChangeResult(z, log_det, {})
 
     def _decoder_volume_change(self, z, c, **kwargs) -> VolumeChangeResult:
-        x1, jac_enc = self._decoder_jac(z, c, **kwargs)
-        projected = project_jac_to_manifold(jac_enc, x1, z, self.manifold)
+        x1, jac_dec = self._decoder_jac(z, c, **kwargs)
+        projected = project_jac_to_manifold(jac_dec, x1, z, self.manifold)
         log_det = projected.slogdet()[1]
-        return VolumeChangeResult(z, log_det, {})
+        return VolumeChangeResult(x1, log_det, {})
 
     def surrogate_log_prob(self, x, c, **kwargs) -> LogProbResult:
         # Then compute JtJ

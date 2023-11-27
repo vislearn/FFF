@@ -1,10 +1,12 @@
-from .image import get_mnist_datasets, get_cifar10_datasets, get_celeba_datasets
+from .image import (get_celeba_datasets, get_cifar10_datasets,
+                    get_mnist_datasets)
+from .molecular import (load_dw4_dataset, load_lj13_dataset, load_lj55_dataset,
+                        load_qm9_dataset, make_2d_atom_grid_datasets)
+from .sbi import get_sbi_dataset
+from .tabular import get_tabular_datasets
+from .torus import get_torus_protein_dataset, get_torus_rna_dataset
 from .toy import make_toy_data
 from .utils import TrainValTest
-from .tabular import get_tabular_datasets
-from .molecular import make_2d_atom_grid_datasets, load_qm9_dataset, load_dw4_dataset, load_lj13_dataset, \
-    load_lj55_dataset
-from .sbi import get_sbi_dataset
 
 __all__ = ["load_dataset"]
 
@@ -36,5 +38,9 @@ def load_dataset(name: str, **kwargs) -> TrainValTest:
     elif name == "special-orthogonal":
         from fff.data.special_orthogonal import make_so_data
         return make_so_data(**kwargs)
+    elif name == "torus_protein":
+        return get_torus_protein_dataset(**kwargs)
+    elif name == "torus_rna":
+        return get_torus_rna_dataset(**kwargs)
     else:
         return make_toy_data(name, **kwargs)

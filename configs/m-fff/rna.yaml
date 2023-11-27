@@ -1,0 +1,43 @@
+model: fff.ManifoldFreeFormFlow
+
+data_set:
+  name: torus_rna
+
+noise: 0.01
+
+latent_distribution:
+  name: manifold-uniform
+
+lr_scheduler: "onecyclelr"
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 1000
+  x_sample_reconstruction: 100
+  z_reconstruction: 100
+  z_sample_reconstruction: 1000
+
+
+models:
+  - name: fff.model.NonSquareMatrixFlatten
+    latent_dim: data
+    original_shape: [7, 2]
+  - name: fff.model.ResNet
+    latent_dim: data
+    layers_spec: [[256, 256], [256, 256]]
+  - name: fff.model.NonSquareMatrixFlatten
+    latent_dim: data
+    reverse: true
+    original_shape: [7, 2]
+
+batch_size: 512
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.001
+
+max_epochs: 8000
+
+accelerator: "gpu"
+num_workers: 0

@@ -1,3 +1,4 @@
+from .earth import get_earth_dataset
 from .image import (get_celeba_datasets, get_cifar10_datasets,
                     get_mnist_datasets)
 from .molecular import (load_dw4_dataset, load_lj13_dataset, load_lj55_dataset,
@@ -42,5 +43,7 @@ def load_dataset(name: str, **kwargs) -> TrainValTest:
         return get_torus_protein_dataset(**kwargs)
     elif name == "torus_rna":
         return get_torus_rna_dataset(**kwargs)
+    elif name in ["fire", "flood", "quakes", "volcano"]:
+        return get_earth_dataset(name, **kwargs)
     else:
         return make_toy_data(name, **kwargs)

@@ -14,12 +14,15 @@ def get_sample_nll(model, x0, n_around_z=100, n_around_x=0, n_random_z=0, distan
 
     There are three ways to get sensible latent codes:
     1. Sample from a small region (std=0.01) around the latent code of x0 produced by the encoder.
-    3. Sample from a small region (std=0.01) around x0 and encode.
-    2. Sample from the latent distribution.
+    2. Sample from a small region (std=0.01) around x0 and encode.
+    3. Sample from the latent distribution.
 
     :param model: Model to evaluate.
     :param x0: Data to evaluate. Shape: (batch_size, ...)
-    :param n_random_z: Number of latent samples to draw.
+    :param n_around_z: Number of samples to draw around the latent code of x0.
+    :param n_around_x: Number of samples to draw around x0.
+    :param n_random_z: Number of samples to draw from the latent distribution.
+    :param distance_cutoff: If provided, samples further away than this distance will be assigned inf nll.
     """
     x0 = x0.to("cpu")
     latent = model.get_latent(model.device)
@@ -29,13 +32,18 @@ def get_sample_nll(model, x0, n_around_z=100, n_around_x=0, n_random_z=0, distan
 
     batch_size = x0.shape[0]
 
-    if n_random_z > 0:
-        z_latent_sampled = latent.sample((n_random_z,))
-        for batch in z_latent_sampled.split(batch_size):
-            z_cond = model.apply_conditions((z_latent_sampled,))
-            x_latent_sampled = model.decode(z_cond.x0, z_cond.condition)
-            z_sampled.append(z_latent_sampled.cpu())
-            x_sampled.append(x_latent_sampled.cpu())
+    if n_around_z > 0:
+        x_cond = model.apply_conditions((x0,))
+        z0 = model.encode(x_cond.x0, x_cond.condition)
+        z_grid = z0.unsqueeze(0) + torch.randn(n_around_z, z0.shape[0], *z0.shape[1:]) * 0.01
+        z_grid[0] = z0
+        for batch in z_grid:
+            if hasattr(model, "manifold"):
+                z_grid = model.manifold.projection(batch)
+            z_cond = model.apply_conditions((batch,))
+            z_grid_samples_x = model.decode(z_cond.x0, z_cond.condition)
+            z_sampled.append(z_grid.cpu())
+            x_sampled.append(z_grid_samples_x.cpu())
 
     if n_around_x > 1:
         x_grid = x0.unsqueeze(0) + torch.randn(n_around_x, x0.shape[0], *x0.shape[1:]) * 0.01
@@ -50,18 +58,13 @@ def get_sample_nll(model, x0, n_around_z=100, n_around_x=0, n_random_z=0, distan
             z_sampled.append(z_grid.cpu())
             x_sampled.append(x_grid_samples_x.cpu())
 
-    if n_around_z > 0:
-        x_cond = model.apply_conditions((x0,))
-        z0 = model.encode(x_cond.x0, x_cond.condition)
-        z_grid = z0.unsqueeze(0) + torch.randn(n_around_z, z0.shape[0], *z0.shape[1:]) * 0.01
-        z_grid[0] = z0
-        for batch in z_grid:
-            if hasattr(model, "manifold"):
-                z_grid = model.manifold.projection(batch)
-            z_cond = model.apply_conditions((batch,))
-            z_grid_samples_x = model.decode(z_cond.x0, z_cond.condition)
-            z_sampled.append(z_grid.cpu())
-            x_sampled.append(z_grid_samples_x.cpu())
+    if n_random_z > 0:
+        z_latent_sampled = latent.sample((n_random_z,))
+        for batch in z_latent_sampled.split(batch_size):
+            z_cond = model.apply_conditions((z_latent_sampled,))
+            x_latent_sampled = model.decode(z_cond.x0, z_cond.condition)
+            z_sampled.append(z_latent_sampled.cpu())
+            x_sampled.append(x_latent_sampled.cpu())
 
     z_sampled = torch.cat(z_sampled, dim=0).reshape(-1, model._data_dim).cpu()
     x_sampled = torch.cat(x_sampled, dim=0).reshape(-1, model.latent_dim).cpu()

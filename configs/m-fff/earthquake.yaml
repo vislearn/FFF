@@ -1,0 +1,10 @@
+data_set:
+  name: quakes
+  root: data
+
+noise: 0.0015
+
+
+lr_scheduler.steps_per_epoch: 153
+lr_scheduler.epochs: 8000
+max_epochs: 8000

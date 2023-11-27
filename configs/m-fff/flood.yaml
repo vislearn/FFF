@@ -1,0 +1,10 @@
+data_set:
+  name: flood
+  root: data
+
+noise: 0.0015
+
+
+lr_scheduler.steps_per_epoch: 121
+lr_scheduler.epochs: 10000
+max_epochs: 10000

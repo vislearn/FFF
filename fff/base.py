@@ -62,10 +62,7 @@ class FreeFormBase(Trainable):
     hparams: FreeFormBaseHParams
 
     def __init__(self, hparams: FreeFormBaseHParams | dict):
-        if not isinstance(hparams, FreeFormBaseHParams):
-            hparams = FreeFormBaseHParams(**hparams)
-
-        train_data, val_data, test_data = fff.data.load_dataset(**hparams.data_set)
+        train_data, val_data, test_data = fff.data.load_dataset(**hparams["data_set"])
 
         super().__init__(hparams, train_data=train_data, val_data=val_data, test_data=test_data)
 

@@ -18,7 +18,9 @@ class ManifoldFreeFormFlow(FreeFormBase):
 
     hparams: ManifoldFreeFormFlowHParams
 
-    def __init__(self, hparams):
+    def __init__(self, hparams: dict | ManifoldFreeFormFlowHParams):
+        if not isinstance(hparams, ManifoldFreeFormFlowHParams):
+            hparams = ManifoldFreeFormFlowHParams(**hparams)
         super().__init__(hparams)
 
         if not hasattr(self.train_data, "manifold"):

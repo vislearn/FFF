@@ -13,6 +13,8 @@ class FreeFormInjectiveFlow(FreeFormBase):
     hparams: FreeFormInjectiveFlowHParams
 
     def __init__(self, hparams: FreeFormInjectiveFlowHParams | dict):
+        if not isinstance(hparams, FreeFormInjectiveFlowHParams):
+            hparams = FreeFormInjectiveFlowHParams(**hparams)
         super().__init__(hparams)
         if self.data_dim >= self.latent_dim:
             raise ValueError("Latent dimension must be less than data dimension "

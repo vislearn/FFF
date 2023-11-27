@@ -28,7 +28,7 @@ def sample_v_in_tangent(x: torch.Tensor, hutchinson_samples: int, manifold):
         raise NotImplementedError(f"More than one Hutchinson sample not implemented for M-FFF, "
                                   f"{hutchinson_samples} requested.")
     v = random_tangent_vec(manifold, x.detach(), n_samples=batch_size)
-    v = v / torch.norm(v, dim=list(range(1, len(v.shape))), keepdim=True)
+    v = v / torch.norm(v, p=2, dim=list(range(1, len(v.shape))), keepdim=True)
     return v[..., None] * sqrt(total_dim)
 
 

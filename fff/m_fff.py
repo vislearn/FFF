@@ -75,7 +75,7 @@ class ManifoldFreeFormFlow(FreeFormBase):
 
     def _decoder_volume_change(self, z, c, **kwargs) -> VolumeChangeResult:
         x1, jac_dec = self._decoder_jac(z, c, **kwargs)
-        projected = project_jac_to_manifold(jac_dec, x1, z, self.manifold)
+        projected = project_jac_to_manifold(jac_dec, z, x1, self.manifold)
         log_det = projected.slogdet()[1]
         return VolumeChangeResult(x1, log_det, {})
 

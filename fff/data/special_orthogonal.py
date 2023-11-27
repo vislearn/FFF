@@ -8,7 +8,7 @@ from scipy.stats import special_ortho_group
 
 from torch.utils.data import TensorDataset
 
-from mlae.data.manifold import ManifoldDataset
+from fff.data.manifold import ManifoldDataset
 
 
 def make_so_data(K: int = 16, n_dim: int = 3,

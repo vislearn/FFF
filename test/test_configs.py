@@ -19,14 +19,13 @@ config_files_collection = [
     ['../configs/m-fff/rna.yaml'],
     ['../configs/m-fff/protein.yaml'],
     # FIF models
-    ['../configs/fif/tabular-gas.yaml'],
-    ['../configs/fif/tabular-hepmass.yaml'],
+    ['../configs/fif/tabular.yaml', '../configs/fif/tabular-power.yaml'],
+    ['../configs/fif/tabular.yaml', '../configs/fif/tabular-miniboone.yaml'],
+    ['../configs/fif/tabular.yaml', '../configs/fif/tabular-gas.yaml'],
+    ['../configs/fif/tabular.yaml', '../configs/fif/tabular-hepmass.yaml'],
     ['../configs/fif/toy.yaml'],
     ['../configs/fif/celeba.yaml'],
     ['../configs/fif/mnist-conditional.yaml'],
-    ['../configs/fif/tabular-power.yaml'],
-    ['../configs/fif/tabular-miniboone.yaml'],
-    ['../configs/fif/tabular.yaml'],
     ['../configs/fif/mnist.yaml'],
     # FFF models
     ['../configs/fff/sbi_gaussian_mixture_example.yaml'],

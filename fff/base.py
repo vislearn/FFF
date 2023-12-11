@@ -174,7 +174,7 @@ class FreeFormBase(Trainable):
             scale = torch.ones(self.latent_dim, device=device)
 
             return Independent(
-                Normal(loc, scale), self.latent_dim,
+                Normal(loc, scale), 1,
             )
         elif name == "student_t":
             df = self.hparams.latent_distribution["df"] * torch.ones(1, device=device)

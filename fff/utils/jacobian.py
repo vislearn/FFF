@@ -1,9 +1,17 @@
-from functools import partial
+from functools import partial, wraps
 import torch
 from torch.func import jacfwd, jacrev, vmap
 
 from fff.model.utils import batch_wrap
-from fff.other_losses.exact_jac_det import double_output
+
+
+def double_output(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        out = fn(*args, **kwargs)
+        return out, out
+
+    return wrapper
 
 
 def compute_jacobian(x_in, fn, *func_args, chunk_size=None, grad_type="backward", **func_kwargs):

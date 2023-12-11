@@ -1,4 +1,4 @@
-model: mlae.model.MaximumLikelihoodAutoencoder
+model: fff.ManifoldFreeFormFlow
 
 latent_distribution:
   name: manifold-von-mises-fisher
@@ -26,7 +26,7 @@ loss_weights:
   x_sample_reconstruction: 200.0
 
 models:
-  - name: mlae.model.ResNet
+  - name: fff.model.ResNet
     latent_dim: data
     layers_spec:
       - [256, 256]

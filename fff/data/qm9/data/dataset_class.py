@@ -97,6 +97,7 @@ class ProcessedDataset(Dataset):
     def calc_stats(self):
         self.stats = {key: (val.mean(), val.std()) for key, val in self.data.items() if type(val) is torch.Tensor and val.dim() == 1 and val.is_floating_point()}
 
+    @torch.no_grad()
     def sample_from_model(self, model, count, n_atoms=None):
         latent = model.get_latent(model.device)
 

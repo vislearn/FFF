@@ -14,5 +14,6 @@ git+https://github.com/vislearn/FrEIA.git#FrEIA
 ninja
 ml-collections
 sbi
+cython
 sbibm
 geomstats

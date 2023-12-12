@@ -1,4 +1,6 @@
-from .base import FreeFormBaseHParams, FreeFormBase
+from math import prod
+
+from .base import FreeFormBaseHParams, FreeFormBase, VolumeChangeResult
 
 
 class FreeFormFlowHParams(FreeFormBaseHParams):
@@ -21,7 +23,7 @@ class FreeFormFlow(FreeFormBase):
 
     def _make_latent(self, name, device, **kwargs):
         try:
-            super()._make_latent(name, device, **kwargs)
+            return super()._make_latent(name, device, **kwargs)
         except ValueError:
             # Needed for QM9, only useful for dimension-preserving flows
             if name == "position-feature-prior":
@@ -37,3 +39,15 @@ class FreeFormFlow(FreeFormBase):
                 return PositionFeaturePrior(**kwargs, nodes_dist=nodes_dist, device=device)
             else:
                 raise
+
+    def _encoder_volume_change(self, x, c, **kwargs) -> VolumeChangeResult:
+        z, jac_enc = self._encoder_jac(x, c, **kwargs)
+        jac_enc = jac_enc.reshape(x.shape[0], prod(z.shape[1:]), prod(x.shape[1:]))
+        log_det = jac_enc.slogdet()[1]
+        return VolumeChangeResult(z, log_det, {})
+
+    def _decoder_volume_change(self, z, c, **kwargs) -> VolumeChangeResult:
+        x1, jac_dec = self._decoder_jac(z, c, **kwargs)
+        jac_dec = jac_dec.reshape(z.shape[0], prod(x1.shape[1:]), prod(z.shape[1:]))
+        log_det = jac_dec.slogdet()[1]
+        return VolumeChangeResult(x1, log_det, {})

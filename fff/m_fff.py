@@ -101,8 +101,9 @@ class ManifoldFreeFormFlow(FreeFormBase):
 
     def dequantize(self, batch):
         dequantize_out = super().dequantize(batch)
-        if dequantize_out[1] is not batch[0]:
-            x_projected = self.manifold.projection(batch[1])
+        noisy_data = dequantize_out[1]
+        if noisy_data is not batch[0]:
+            x_projected = self.manifold.projection(noisy_data)
             dequantize_out = (dequantize_out[0], x_projected, *dequantize_out[2:])
         return dequantize_out
 

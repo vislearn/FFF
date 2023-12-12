@@ -108,7 +108,7 @@ class VonMisesFisherTrainable(ModuleDistribution):
         self.manifold = manifold
         self.m = loc.shape[-1]
         self.k = k
-        self.e1 = torch.zeros_like(self.loc_unprojected)
+        self.e1 = nn.Parameter(torch.zeros_like(self.loc_unprojected), requires_grad=False)
         self.e1[..., 0] = 1
         self.log_scale = nn.Parameter(torch.log(scale), requires_grad=scale.requires_grad)
 
@@ -121,12 +121,12 @@ class VonMisesFisherTrainable(ModuleDistribution):
         dist._VonMisesFisher__e1 = self.e1
         dist._VonMisesFisher__m = self.m
 
-        def _log_normalization(vmf_dist):
+        def _log_normalization():
             # Fix reshaping of output in VMF
             output = -(
-                (vmf_dist._VonMisesFisher__m / 2 - 1) * torch.log(vmf_dist.scale)
-                - (vmf_dist._VonMisesFisher__m / 2) * math.log(2 * math.pi)
-                - (vmf_dist.scale + torch.log(ive(vmf_dist._VonMisesFisher__m / 2 - 1, vmf_dist.scale)))
+                (self.m / 2 - 1) * torch.log(self.scale)
+                - (self.m / 2) * math.log(2 * math.pi)
+                - (self.scale + torch.log(ive(self.m / 2 - 1, self.scale)))
             )
             return output
         

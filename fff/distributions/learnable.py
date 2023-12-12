@@ -20,5 +20,8 @@ class ModuleDistribution(Module):
     def log_prob(self, x):
         return self.instantiate().log_prob(x)
 
+    def rsample(self, sample_shape):
+        return self.instantiate().rsample(sample_shape)
+
     def sample(self, sample_shape):
         return self.instantiate().sample(sample_shape)

@@ -15,3 +15,4 @@ ninja
 ml-collections
 sbi
 sbibm
+geomstats

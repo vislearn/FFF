@@ -18,6 +18,7 @@ config_files_collection = [
     # Toric models
     ['../configs/m-fff/rna.yaml'],
     ['../configs/m-fff/protein.yaml'],
+
     # FIF models
     ['../configs/fif/tabular.yaml', '../configs/fif/tabular-power.yaml'],
     ['../configs/fif/tabular.yaml', '../configs/fif/tabular-miniboone.yaml'],
@@ -25,11 +26,11 @@ config_files_collection = [
     ['../configs/fif/tabular.yaml', '../configs/fif/tabular-hepmass.yaml'],
     ['../configs/fif/toy.yaml'],
     ['../configs/fif/celeba.yaml'],
-    ['../configs/fif/mnist-conditional.yaml'],
     ['../configs/fif/mnist.yaml'],
+    ['../configs/fif/mnist.yaml', '../configs/fif/mnist-conditional.yaml'],
+
     # FFF models
-    ['../configs/fff/sbi_gaussian_mixture_example.yaml'],
-    ['../configs/fff/sbi_base.yaml'],
+    ['../configs/fff/sbi_base.yaml', '../configs/fff/sbi_gaussian_mixture_example.yaml'],
     ['../configs/fff/dw4.yaml'],
     ['../configs/fff/lj55.yaml'],
     ['../configs/fff/lj13.yaml'],
@@ -48,6 +49,11 @@ def test_configs(config_files):
     module_name, class_name = model.rsplit(".", 1)
     if "data_set" in config and "root" in config["data_set"]:
         config["data_set"]["root"] = "../" + config["data_set"]["root"]
+
+    # Smallest memory footprint
+    config["batch_size"] = 2
+    # config["exact_chunk_size"] = 1
+
     try:
         model = getattr(__import__(module_name, fromlist=[class_name]), class_name)(config)
     except FileNotFoundError:

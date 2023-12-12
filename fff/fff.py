@@ -23,7 +23,7 @@ class FreeFormFlow(FreeFormBase):
 
     def _make_latent(self, name, device, **kwargs):
         try:
-            super()._make_latent(name, device, **kwargs)
+            return super()._make_latent(name, device, **kwargs)
         except ValueError:
             # Needed for QM9, only useful for dimension-preserving flows
             if name == "position-feature-prior":

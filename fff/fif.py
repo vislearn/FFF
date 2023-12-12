@@ -32,7 +32,8 @@ class FreeFormInjectiveFlow(FreeFormBase):
         return VolumeChangeResult(z, log_det, {})
 
     def _decoder_volume_change(self, z, c, **kwargs) -> VolumeChangeResult:
-        x1, jac_dec = self._decoder_jac(z, c, **kwargs)
+        # Forward gradient is faster because latent dimension is smaller than data dimension
+        x1, jac_dec = self._decoder_jac(z, c, grad_type="forward", **kwargs)
         jac_dec = jac_dec.reshape(z.shape[0], prod(x1.shape[1:]), prod(z.shape[1:]))
         jjt = torch.einsum("bki,bkj->bij", jac_dec, jac_dec)
         log_det = jjt.slogdet()[1] / 2

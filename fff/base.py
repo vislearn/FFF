@@ -163,8 +163,8 @@ class FreeFormBase(Trainable):
             latent_hparams = deepcopy(self.hparams.latent_distribution)
             distribution_name = latent_hparams.pop("name")
             latent = self._make_latent(distribution_name, device, **latent_hparams)
-            assert latent is not None, (f"Found None latent distribution (code not config error) "
-                                        f"for name {distribution_name}.")
+            assert latent is not None, (f"Found None latent distribution for name {distribution_name}."
+                                        f"This is likely due to an error in the code, not the config.")
             self.latents[device] = latent
         return self.latents[device]
 
@@ -450,9 +450,13 @@ class FreeFormBase(Trainable):
         # Cyclic consistency of latent code sampled from Gauss
         if not self.training or check_keys("z_sample_reconstruction"):
             z_random = self.get_latent(z.device).sample((z.shape[0],))
+            if isinstance(z_random, tuple):
+                z_random, c_random = z_random
+            else:
+                c_random = c
             try:
                 # Sanity checks might fail for random data
-                z1_random = self.encode(self.decode(z_random, c), c)
+                z1_random = self.encode(self.decode(z_random, c_random), c_random)
                 loss_values["z_sample_reconstruction"] = self._reconstruction_loss(z_random, z1_random)
             except:
                 loss_values["z_sample_reconstruction"] = float("nan") * torch.ones(z_random.shape[0])
@@ -461,9 +465,13 @@ class FreeFormBase(Trainable):
         if not self.training or check_keys("x_sample_reconstruction"):
             # As we only care about the reconstruction, can ignore noise scale
             x_random = self.get_latent(z.device).sample((z.shape[0],))
+            if isinstance(x_random, tuple):
+                x_random, c_random = x_random
+            else:
+                c_random = c
             try:
                 # Sanity checks might fail for random data
-                x1_random = self.decode(self.encode(x_random, c), c)
+                x1_random = self.decode(self.encode(x_random, c_random), c_random)
                 loss_values["x_sample_reconstruction"] = self._reconstruction_loss(x_random, x1_random)
             except:
                 loss_values["x_sample_reconstruction"] = float("nan") * torch.ones(x_random.shape[0])

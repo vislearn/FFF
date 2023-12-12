@@ -58,7 +58,14 @@ def get_gas_raw(data_root):
         B = A.to_numpy().sum(axis=1)
         return B
 
-    data = pandas.read_pickle(os.path.join(data_root, "gas/ethylene_CO.pickle"))
+    try:
+        data = pandas.read_pickle(os.path.join(data_root, "gas/ethylene_CO.pickle"))
+    except ModuleNotFoundError:
+        raise ModuleNotFoundError("Please install an *older* pandas version than 2.X. "
+                                  "If pandas 2.0 or newer is installed, convert ethylene_CO.pickle "
+                                  "to the new format by loading with an older pandas version "
+                                  "and saving with DataFrame.to_pickle(...). The resulting file is then "
+                                  "compatible with newer pandas versions.")
     data.drop("Meth", axis=1, inplace=True)
     data.drop("Eth", axis=1, inplace=True)
     data.drop("Time", axis=1, inplace=True)

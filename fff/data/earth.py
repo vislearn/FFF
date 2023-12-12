@@ -5,7 +5,7 @@ import requests
 import numpy as np
 import pandas as pd
 from math import ceil
-from mlae.data.manifold import ManifoldDataset
+from fff.data.manifold import ManifoldDataset
 from geomstats.geometry.hypersphere import Hypersphere
 
 def lat_long_to_3d(x):

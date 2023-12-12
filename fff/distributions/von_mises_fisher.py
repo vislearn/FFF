@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 from torch.distributions import Distribution, constraints
 from torch.distributions.utils import lazy_property
+import math
+from fff.distributions.learnable import ModuleDistribution
 
 try:
     from hyperspherical_vae.distributions import VonMisesFisher
@@ -96,62 +98,40 @@ class VonMisesFisherMixtureDistribution(Distribution, nn.Module):
         return torch.softmax(self.mixture_weights_logits, dim=0)
 
 
-class VonMisesFisherTrainable(nn.Module, VonMisesFisher):
-    # disable constraint checking by pytorch
-    arg_constraints = {}
-    _arg_constraints = {"loc": torch.distributions.constraints.real, "scale": torch.distributions.constraints.positive}
+class VonMisesFisherTrainable(ModuleDistribution):
 
     def __init__(self, manifold, loc, scale, validate_args=None, k=1, *args, **kwargs):
-        nn.Module.__init__(self)
+        super().__init__()
 
         self.dtype = loc.dtype
         self.loc_unprojected = loc
         self.manifold = manifold
-        self._VonMisesFisher__m = loc.shape[-1]
+        self.m = loc.shape[-1]
         self.k = k
-
-        Distribution.__init__(self, self.loc.size(), validate_args=False)
-        if validate_args:
-            self.validate_args()
+        self.e1 = torch.zeros_like(self.loc_unprojected)
+        self.e1[..., 0] = 1
         self.log_scale = nn.Parameter(torch.log(scale), requires_grad=scale.requires_grad)
 
     @property
     def device(self):
         return self.loc_unprojected.device
 
-    @property
-    def _VonMisesFisher__e1(self):
-        e1 = torch.zeros_like(self.loc_unprojected)
-        e1[..., 0] = 1
-        return e1
+    def instantiate(self):
+        dist = VonMisesFisher(self.loc, self.scale, k=self.k)
+        dist._VonMisesFisher__e1 = self.e1
+        dist._VonMisesFisher__m = self.m
 
-    def validate_args(self):
-        try:
-            arg_constraints = self._arg_constraints
-        except NotImplementedError:
-            arg_constraints = {}
-            warnings.warn(
-                f"{self.__class__} does not define `arg_constraints`. "
-                + "Please set `arg_constraints = {}` or initialize the distribution "
-                + "with `validate_args=False` to turn off validation."
+        def _log_normalization(vmf_dist):
+            # Fix reshaping of output in VMF
+            output = -(
+                (vmf_dist._VonMisesFisher__m / 2 - 1) * torch.log(vmf_dist.scale)
+                - (vmf_dist._VonMisesFisher__m / 2) * math.log(2 * math.pi)
+                - (vmf_dist.scale + torch.log(ive(vmf_dist._VonMisesFisher__m / 2 - 1, vmf_dist.scale)))
             )
-        for param, constraint in arg_constraints.items():
-            if constraints.is_dependent(constraint):
-                continue  # skip constraints that cannot be checked
-            if param not in self.__dict__ and isinstance(
-                    getattr(type(self), param), lazy_property
-            ):
-                continue  # skip checking lazily-constructed args
-            value = getattr(self, param)
-            valid = constraint.check(value)
-            if not valid.all():
-                raise ValueError(
-                    f"Expected parameter {param} "
-                    f"({type(value).__name__} of shape {tuple(value.shape)}) "
-                    f"of distribution {repr(self)} "
-                    f"to satisfy the constraint {repr(constraint)}, "
-                    f"but found invalid values:\n{value}"
-                )
+            return output
+        
+        dist._log_normalization = _log_normalization
+        return dist
 
     @property
     def scale(self):
@@ -162,11 +142,4 @@ class VonMisesFisherTrainable(nn.Module, VonMisesFisher):
         loc = self.manifold.projection(self.loc_unprojected)
         return loc
 
-    def _log_normalization(self):
-        scale = self.scale
-        output = -(
-                ((self._VonMisesFisher__m) / 2 - 1) * torch.log(scale)
-                - ((self._VonMisesFisher__m) / 2) * math.log(2 * math.pi)
-                - (scale + torch.log(ive((self._VonMisesFisher__m) / 2 - 1, scale)))
-        )
-        return output
+

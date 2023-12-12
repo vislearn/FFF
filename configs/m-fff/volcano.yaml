@@ -2,7 +2,7 @@ data_set:
   name: volcano
   root: data
 
-noise: 0.004
+noise: 0.008
 
 
 lr_scheduler.steps_per_epoch: 20

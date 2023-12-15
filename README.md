@@ -25,7 +25,7 @@ This is the official `PyTorch` implementation for our preprints:
     @article{sorrenson2023learning,
         title = {Learning Distributions on Manifolds with Free-form Flows},
         author = {Sorrenson, Peter and Draxler, Felix and Rousselot, Armand and Hummerich, Sander and Köthe, Ullrich},
-        journal = {unpublished},
+        journal = {on your favorite preprint server soon},
         year = {2023}
     }
     ```

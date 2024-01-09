@@ -20,6 +20,15 @@ This is the official `PyTorch` implementation for our preprints:
         year = {2023}
     }
     ```
+3. Learning Distributions on Manifolds with Free-form Flows on learning distributions on a known manifold:
+    ```bibtex
+    @article{sorrenson2023learning,
+        title = {Learning Distributions on Manifolds with Free-form Flows},
+        author = {Sorrenson, Peter and Draxler, Felix and Rousselot, Armand and Hummerich, Sander and Köthe, Ullrich},
+        journal = {on your favorite preprint server soon},
+        year = {2023}
+    }
+    ```
 
 
 ## Installation
@@ -106,7 +115,7 @@ When training has finished, you can import the model via
 ```python
 import fff
 
-model = fff.model.FreeFormFlow.load_from_checkpoint(
+model = fff.FreeFormFlow.load_from_checkpoint(
     'lightning_logs/dw4/version_0/checkpoints/last.ckpt'
 )
 ```

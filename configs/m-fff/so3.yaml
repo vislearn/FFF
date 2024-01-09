@@ -1,0 +1,52 @@
+model: fff.ManifoldFreeFormFlow
+accelerator: gpu
+
+data_set:
+  name: special-orthogonal
+  # todo provide the data
+  stored_seed: 0
+  root: data
+  N_total: 10000000
+
+loss_weights:
+  noisy_reconstruction: 500
+  nll: 1
+  z_projection: 10
+  x1_projection: 10
+  x_sample_reconstruction: 10
+  z_sample_reconstruction: 10
+
+noise: 0.0
+exact_train_nll_every: 10
+
+# models.0.latent_dim: 2
+models:
+  - name: fff.model.MatrixFlatten
+  - name: fff.model.ResNet
+    # layers_spec: [ [ 64, 64 ], [ 64, 64 ] ]
+    layers_spec:
+      - [ 512, 512, 512, 512, 512 ]
+      - [ 512, 512, 512, 512, 512 ]
+      #- [ 512, 512, 512, 512, 512 ]
+      #- [ 512, 512, 512, 512, 512 ]
+  - name: fff.model.MatrixFlatten
+    reverse: true
+
+lr_scheduler:
+  name: ExponentialLR
+  kwargs:
+    gamma: 0.99999
+  interval: step
+max_epochs: 60
+batch_size: 1024
+
+latent_distribution:
+  name: manifold-uniform
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.00001
+
+gradient_clip: 1
+num_workers: 0

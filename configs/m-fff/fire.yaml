@@ -1,0 +1,10 @@
+data_set:
+  name: fire
+  root: data
+
+noise: 0.0015
+
+
+lr_scheduler.steps_per_epoch: 320
+lr_scheduler.epochs: 3500
+max_epochs: 3500

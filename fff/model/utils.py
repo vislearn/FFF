@@ -9,6 +9,21 @@ from lightning import Callback
 from torch import nn
 
 
+class Sin(nn.Module):
+    def forward(self, x):
+        return torch.sin(x)
+    
+class Swish(nn.Module):
+    def __init__(self, beta=1.0):
+        super().__init__()
+        self.beta = beta
+
+    def forward(self, x):
+        return x * torch.sigmoid(self.beta * x)
+    
+torch.nn.Sin = Sin
+torch.nn.Swish = Swish
+
 def get_module(name):
     """ Get a nn.Module in a case-insensitive way """
     modules = torch.nn.__dict__

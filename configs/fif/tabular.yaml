@@ -1,4 +1,4 @@
-model: fff.model.FreeFormInjectiveFlow
+model: fff.FreeFormInjectiveFlow
 
 data_set:
   # name: ... must be specified in separate config file
@@ -12,7 +12,7 @@ loss_weights:
   noisy_reconstruction: 10
 
 models:
-  - name: fff.model.ConvolutionalNeuralNetwork
+  - name: fff.model.FullyConnectedNetwork
     # latent_dim: ... must be specified in separate config file
     layer_spec: [ 256, 256 ]
   - name: fff.model.ResNet

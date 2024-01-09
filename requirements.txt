@@ -11,7 +11,10 @@ torchvision
 torchmetrics
 git+https://github.com/LarsKue/lightning-trainable.git#lightning_trainable
 git+https://github.com/vislearn/FrEIA.git#FrEIA
+git+https://github.com/nicola-decao/s-vae-pytorch.git#hyperspherical_vae
 ninja
 ml-collections
 sbi
+cython
 sbibm
+geomstats

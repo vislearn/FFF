@@ -1,4 +1,4 @@
-model: fff.model.MoleculeFreeFormFlow
+model: fff.special.MoleculeFreeFormFlow
 
 data_set:
   name: qm9

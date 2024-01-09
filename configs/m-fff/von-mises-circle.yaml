@@ -1,0 +1,29 @@
+model: fff.ManifoldFreeFormFlow
+accelerator: cpu
+
+data_set:
+  name: von-mises-circle
+  project: True
+  center: False
+  mode_count: 2
+
+loss_weights:
+  noisy_reconstruction: 10
+  nll: 1
+  z_projection: .1
+  x1_projection: .1
+
+noise: 0.0
+exact_train_nll_every: 10
+
+latent_distribution:
+  name: manifold-uniform
+
+# models.0.latent_dim: 2
+models:
+  - name: fff.model.ResNet
+    layers_spec: [[64, 64], [64, 64]]
+
+lr_scheduler: null
+max_epochs: 10
+batch_size: 32

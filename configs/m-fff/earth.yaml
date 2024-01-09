@@ -1,0 +1,44 @@
+model: fff.ManifoldFreeFormFlow
+
+latent_distribution:
+  name: manifold-von-mises-fisher
+  n_modes: 5
+  learnable: true
+
+lr_scheduler: 
+    name: "onecyclelr"
+    base_momentum: 0.85
+    div_factor: 25.0
+    final_div_factor: 100.0
+    interval: "step"
+    max_lr: 0.0002
+    max_momentum: 0.95
+
+
+gradient_clip: 10.0
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 10000 
+  z_projection_distance: 0.0
+  x1_projection_distance: 0.0
+  z_sample_reconstruction: 200.0
+  x_sample_reconstruction: 200.0
+
+models:
+  - name: fff.model.ResNet
+    latent_dim: data
+    layers_spec:
+      - [256, 256]
+      - [256, 256]
+      - [256, 256]
+      - [256, 256]
+    activation: sin
+
+batch_size: 32
+
+optimizer:
+  name: adam
+  lr: 0.0002
+  weight_decay: 0.00005
+  betas: [0.9, 0.999]

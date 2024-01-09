@@ -19,7 +19,7 @@ models:
     n_layers: 20
 
 model_checkpoint:
-  monitor: validation/nll_dec
+  monitor: validation/nll
   save_last: True
   every_n_epochs: 25
   save_top_k: 5

@@ -9,15 +9,14 @@ import numpy as np
 import torch
 from bgflow import LennardJonesPotential
 from bgflow.bg import sampling_efficiency
-from bgflow.utils import (distance_vectors, distances_from_vectors,
-                          as_numpy
-                          )
+from bgflow.utils import (
+    distance_vectors, distances_from_vectors, as_numpy
+)
 from torch.func import jacrev, vmap
 from tqdm.auto import tqdm, trange
 
 from fff.evaluate.utils import load_cache
 from fff.model.utils import batch_wrap
-from fff.other_losses.exact_jac_det import double_output, compute_volume_change
 
 
 def _tgt_info(model):
@@ -172,15 +171,23 @@ def ess(bg_samples):
 
 
 @torch.no_grad()
-def nll(model, ckpt_file, bg, batch_limit=None, force_update=None):
-    cache_file = ckpt_file.parents[1] / f"nll_{ckpt_file.name}.txt"
+def nll(model, ckpt_file, bg, batch_limit=None, force_update=None, data="train"):
+    cache_file = ckpt_file.parents[1] / f"nll_{ckpt_file.name}_{data}.txt"
     print(cache_file.exists())
     if load_cache(ckpt_file, cache_file, force_update=force_update):
         with cache_file.open("r") as f:
             nll = float(f.read())
     else:
         nlls = []
-        with tqdm(model.train_dataloader()) as pbar:
+        if data == "train":
+            data_loader = model.train_dataloader()
+        elif data == "validation":
+            data_loader = model.val_dataloader()
+        elif data == "test":
+            data_loader = model.test_dataloader()
+        else:
+            raise ValueError(f"Invalid data split {data!r}")
+        with tqdm(data_loader) as pbar:
             for i, batch in enumerate(pbar):
                 if batch_limit is not None and i == batch_limit:
                     break

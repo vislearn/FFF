@@ -1,23 +1,23 @@
 # Free-form flows 
 
-This is the official `PyTorch` implementation for our preprints:
+This is the official `PyTorch` implementation for our papers:
 
 1. [Free-form flows: Make Any Architecture a Normalizing Flow](http://arxiv.org/abs/2310.16624) on full-dimensional normalizing flows:
     ```bibtex
-    @article{draxler2023freeform,
-        title = {Free-form flows: Make Any Architecture a Normalizing Flow},
-        author = {Draxler, Felix and Sorrenson, Peter and Rousselot, Armand and Zimmermann, Lea and Köthe, Ullrich},
-        journal = {arXiv preprint arXiv:2310.16624},
-        year = {2023}
+    @inproceedings{draxler2024freeform,
+        title = {{Free-form flows: Make Any Architecture a Normalizing Flow}},
+        author = {Draxler, Felix and Sorrenson, Peter and Zimmermann, Lea and Rousselot, Armand and Köthe, Ullrich},
+        booktitle = {International Conference on Artificial Intelligence and Statistics},
+        year = {2024}
     }
     ```
 2. [Lifting Architectural Constraints of Injective Flows](http://arxiv.org/abs/2306.01843) on learning a manifold and the distribution on it jointly:
     ```bibtex
-    @article{sorrenson2023lifting,
-        title = {Lifting Architectural Constraints of Injective Flows},
+    @inproceedings{sorrenson2024lifting,
+        title = {{Lifting Architectural Constraints of Injective Flows}},
+        booktitle = {International {{Conference}} on {{Learning Representations}}},
         author = {Sorrenson, Peter and Draxler, Felix and Rousselot, Armand and Hummerich, Sander and Zimmermann, Lea and Köthe, Ullrich},
-        journal = {arXiv preprint arXiv:2306.01843},
-        year = {2023}
+        year = {2024}
     }
     ```
 3. [Learning Distributions on Manifolds with Free-form Flows](https://arxiv.org/abs/2312.09852) on learning distributions on a known manifold:

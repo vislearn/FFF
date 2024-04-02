@@ -34,6 +34,9 @@ def load_dataset(name: str, **kwargs) -> TrainValTest:
     elif name == "special-orthogonal":
         from fff.data.special_orthogonal import make_so_data
         return make_so_data(**kwargs)
+    elif name == "bunny":
+        from fff.data.meshes import make_bunny_data
+        return make_bunny_data(**kwargs)
     elif name.startswith("torus_"):
         if name == "torus_protein":
             from .torus import get_torus_protein_dataset

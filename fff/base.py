@@ -248,11 +248,11 @@ class FreeFormBase(Trainable):
         except TypeError:
             return self.get_latent(z.device).log_prob(z)
 
-    def sample(self, sample_shape, condition=None):
+    def sample(self, sample_shape, condition=None, latent_scale=1.0):
         """
         Sample via the decoder.
         """
-        z = self.get_latent(self.device).sample(sample_shape)
+        z = self.get_latent(self.device).sample(sample_shape) * latent_scale
         z = z.reshape(prod(sample_shape), *z.shape[len(sample_shape):])
         batch = [z]
         if condition is not None:

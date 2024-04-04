@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+from typing import Any, Tuple
 
 import igl
 import numpy as np
@@ -11,6 +12,7 @@ from fff.data.manifold import ManifoldDataset
 from geomstats.geometry.manifold import Manifold
 from torch.utils.data import Dataset
 import geomstats.backend as gs
+from evtk import hl, vtk
 
 
 class Metric(Enum):
@@ -18,6 +20,64 @@ class Metric(Enum):
     BIHARMONIC = "biharmonic"
     COMMUTETIME = "commutetime"
     HEAT = "heat"
+
+
+class DifferentiableClamp(torch.autograd.Function):
+    generate_vmap_rule = True
+
+    @staticmethod
+    def forward(x, min, max):
+        return x.clamp(min, max)
+
+    @staticmethod
+    def setup_context(ctx: Any, inputs: Tuple[Any, ...], output: Any) -> Any:
+        pass
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        # Pass gradients to x through as if clamp wasn't applied
+        return grad_output, None, None
+
+    @staticmethod
+    def jvp(ctx, x_tangent, min_val_tangent, max_val_tangent):
+        return x_tangent
+
+def points_to_vtk(filename, pts):
+    pts = pts.detach().cpu().numpy() if isinstance(pts, torch.Tensor) else pts
+    hl.pointsToVTK(
+        filename,
+        x=pts[:, 0].copy(order="F"),
+        y=pts[:, 1].copy(order="F"),
+        z=pts[:, 2].copy(order="F"),
+    )
+
+
+def trimesh_to_vtk(filename, v, f, *, cell_data={}, point_data={}):
+    v = v.detach().cpu().numpy() if isinstance(v, torch.Tensor) else v
+    f = f.detach().cpu().numpy() if isinstance(f, torch.Tensor) else f
+
+    for key, value in cell_data.items():
+        cell_data[key] = (
+            value.detach().cpu().numpy() if isinstance(value, torch.Tensor) else value
+        )
+
+    for key, value in point_data.items():
+        point_data[key] = (
+            value.detach().cpu().numpy() if isinstance(value, torch.Tensor) else value
+        )
+
+    n_cells = f.shape[0]
+    hl.unstructuredGridToVTK(
+        path=filename,
+        x=v[:, 0].copy(order="F"),
+        y=v[:, 1].copy(order="F"),
+        z=v[:, 2].copy(order="F"),
+        connectivity=f.reshape(-1),
+        offsets=np.arange(start=3, stop=3 * (n_cells + 1), step=3, dtype="uint32"),
+        cell_types=np.ones(n_cells, dtype="uint8") * vtk.VtkTriangle.tid,
+        cellData=cell_data,
+        pointData=point_data,
+    )
 
 
 def csr_row_set_nz_to_val(csr, row, value=0):
@@ -53,7 +113,8 @@ def project_edge(p, a, b):
     x = p - a
     v = b - a
     r = torch.sum(x * v, dim=-1, keepdim=True) / torch.sum(v * v, dim=-1, keepdim=True)
-    r = r.clamp(max=1.0, min=0.0)
+    r = DifferentiableClamp.apply(r, 0.0, 1.0)
+    # r = r.clamp(max=1.0, min=0.0)
     projx = v * r
     return projx + a
 
@@ -314,8 +375,12 @@ class Mesh(Manifold):
         )
         return torch.sum(self.v[self.f[f_idx]] * barycoords[..., None], axis=1)
 
+    @property
+    def volume(self):
+        return torch.sum(self.areas)
+
     def uniform_logprob(self, x):
-        tot_area = torch.sum(self.areas)
+        tot_area = self.volume()
         return torch.full_like(x[..., 0], -torch.log(tot_area))
 
     def random_base(self, *args, **kwargs):

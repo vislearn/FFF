@@ -261,9 +261,12 @@ class FreeFormBase(Trainable):
         x = self.decode(z, c)
         return x.reshape(sample_shape + x.shape[1:])
 
-    def exact_log_prob(self, x, c, jacobian_target="decoder",
+    def exact_log_prob(self, x, c=None, jacobian_target="decoder",
                        input_is_z=False, **kwargs) -> LogProbResult:
         metrics = {}
+
+        if c is None and not self.is_conditional():
+            c = torch.empty((x.shape[0], 0), device=x.device, dtype=x.dtype)
 
         if input_is_z:
             if jacobian_target != "decoder":

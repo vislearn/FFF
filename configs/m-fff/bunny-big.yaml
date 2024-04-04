@@ -1,0 +1,49 @@
+model: fff.ManifoldFreeFormFlow
+accelerator: gpu
+
+data_set:
+  name: bunny
+  root: data/mesh
+  data_file: bunny_eigfn009.npy
+  obj_file: bunny_simp.obj
+
+
+loss_weights:
+  noisy_reconstruction: 1000
+  nll: 1
+  z_projection: 10
+  x1_projection: 10
+  x_sample_reconstruction: 10
+  z_sample_reconstruction: 10
+
+noise: 0.0
+exact_train_nll_every: 10
+
+# models.0.latent_dim: 2
+models:
+  - name: fff.model.ResNet
+    # layers_spec: [ [ 64, 64 ], [ 64, 64 ] ]
+    layers_spec:
+      - [ 512, 512, 512, 512, 512 ]
+      - [ 512, 512, 512, 512, 512 ]
+      - [ 512, 512, 512, 512, 512 ]
+      - [ 512, 512, 512, 512, 512 ]
+
+lr_scheduler:
+  name: ExponentialLR
+  kwargs:
+    gamma: 0.99999
+  interval: step
+max_epochs: 600
+batch_size: 1024
+
+latent_distribution:
+  name: manifold-uniform
+
+optimizer:
+  name: adam
+  lr: 0.001
+  weight_decay: 0.00001
+
+gradient_clip: 1
+num_workers: 0

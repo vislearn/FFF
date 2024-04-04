@@ -209,14 +209,26 @@ class FreeFormBase(Trainable):
             callbacks.append(TrainWallClock())
         return callbacks
 
-    def encode(self, x, c):
+    def encode(self, x, c, intermediate=False):
+        if intermediate:
+            outs = []
         for model in self.models:
             x = model.encode(x, c)
+            if intermediate:
+                outs.append(x)
+        if intermediate:
+            x = x, outs
         return x
 
-    def decode(self, z, c):
+    def decode(self, z, c, intermediate=False):
+        if intermediate:
+            outs = []
         for model in self.models[::-1]:
             z = model.decode(z, c)
+            if intermediate:
+                outs.append(z)
+        if intermediate:
+            z = z, outs
         return z
 
     def _encoder_jac(self, x, c, **kwargs):
@@ -319,18 +331,42 @@ class FreeFormBase(Trainable):
         estimator_name = config.pop("name")
         assert estimator_name == "surrogate"
 
+        encoder_intermediates = []
+        decoder_intermediates = []
+
+        def wrapped_encode(x):
+            z, intermediates = self.encode(x, c, intermediate=True)
+            encoder_intermediates.extend(intermediates)
+            return z
+
+        def wrapped_decode(z):
+            x, intermediates = self.decode(z, c, intermediate=True)
+            decoder_intermediates.extend(intermediates)
+            return x
+
         out = nll_surrogate(
             x,
-            lambda _x: self.encode(_x, c),
-            lambda z: self.decode(z, c),
+            wrapped_encode,
+            wrapped_decode,
             **kwargs
         )
         volume_change = out.surrogate
+
+        out.regularizations.update(self.intermediate_reconstructions(decoder_intermediates, encoder_intermediates))
 
         latent_prob = self._latent_log_prob(out.z, c)
         return LogProbResult(
             out.z, out.x1, latent_prob + volume_change, out.regularizations
         )
+
+    def intermediate_reconstructions(self, decoder_intermediates, encoder_intermediates):
+        regularizations = {}
+        regularizations["intermediate_reconstruction_all"] = 0.0
+        for idx, (a, b) in enumerate(zip(encoder_intermediates[:-1], decoder_intermediates[-1:0:-1])):
+            intermediate_loss = torch.sum((a - b).reshape(a.shape[0], -1) ** 2, -1)
+            regularizations[f"intermediate_reconstruction_{idx}"] = intermediate_loss
+            regularizations["intermediate_reconstruction_all"] += intermediate_loss
+        return regularizations
 
     def _reconstruction_loss(self, a, b):
         return torch.sum((a - b).reshape(a.shape[0], -1) ** 2, -1)

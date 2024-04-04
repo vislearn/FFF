@@ -51,20 +51,28 @@ class ManifoldFreeFormFlow(FreeFormBase):
         else:
             raise ValueError(f"Unknown latent distribution: {name!r}")
 
-    def encode(self, x, c, project=True, project_x=False):
+    def encode(self, x, c, project=True, project_x=False, intermediate=False):
         if project_x:
             x = self.manifold.projection(x)
-        z = super().encode(x, c)
+        z = super().encode(x, c, intermediate=intermediate)
+        if intermediate:
+            z, outs = z
         if project:
             z = self.manifold.projection(z)
+        if intermediate:
+            z = z, outs
         return z
 
-    def decode(self, z, c, project=True, project_z=False):
+    def decode(self, z, c, project=True, project_z=False, intermediate=False):
         if project_z:
             z = self.manifold.projection(z)
-        x = super().decode(z, c)
+        x = super().decode(z, c, intermediate=intermediate)
+        if intermediate:
+            x, outs = x
         if project:
             x = self.manifold.projection(x)
+        if intermediate:
+            x = x, outs
         return x
 
     def _encoder_volume_change(self, x, c, **kwargs) -> VolumeChangeResult:
@@ -85,14 +93,29 @@ class ManifoldFreeFormFlow(FreeFormBase):
         estimator_name = config.pop("name")
         assert estimator_name == "surrogate"
 
+        encoder_intermediates = []
+        decoder_intermediates = []
+
+        def wrapped_encode(x):
+            z, intermediates = self.encode(x, c, project=False, intermediate=True)
+            encoder_intermediates.extend(intermediates)
+            return z
+
+        def wrapped_decode(z):
+            x, intermediates = self.decode(z, c, project=False, intermediate=True)
+            decoder_intermediates.extend(intermediates)
+            return x
+
         out = nll_surrogate(
             x,
-            lambda _x: self.encode(_x, c, project=False),
-            lambda z: self.decode(z, c, project=False),
+            wrapped_encode,
+            wrapped_decode,
             manifold=self.manifold,
             **kwargs
         )
         volume_change = out.surrogate
+
+        out.regularizations.update(self.intermediate_reconstructions(encoder_intermediates, decoder_intermediates))
 
         latent_prob = self._latent_log_prob(out.z, c)
         return LogProbResult(

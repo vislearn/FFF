@@ -437,6 +437,65 @@ class MeshDataset(Dataset):
     def __getitem__(self, idx):
         return self.data[idx],
 
+    def compute_metrics(self, model):
+        """
+        Compare the face the model generates samples in to the
+        faces that the data has triangles in.
+
+        Then compute various metrics:
+
+        - What area of triangles do not have any data?
+        - What area of triangles are not sampled where the data has data?
+        - KL & NLL to distribution fit to sampled data (via triangles)
+        """
+        sample_count = 1000000
+        batch_size = 10000
+
+        def idx_hist(f_idx, tot_count):
+            indices, count = torch.unique(f_idx, return_counts=True)
+            f_counts = torch.zeros(tot_count, dtype=int)
+            f_counts[indices] = count
+            return f_counts
+
+
+        f_idx_sample = []
+        f_idx_train = []
+
+        v = model.train_data.manifold.v.cuda()
+        f = model.train_data.manifold.f.cuda()
+        for i in range(sample_count // batch_size):
+            with torch.no_grad():
+                samples = model.sample((batch_size,))
+
+            f_idx_sample.append(closest_point(samples, v, f)[1].cpu())
+            f_idx_train.append(
+                closest_point(model.train_data[i * batch_size:(i + 1) * batch_size][0].cuda(), v, f)[1].cpu())
+        f_counts_sample = idx_hist(torch.cat(f_idx_sample), len(f))
+        f_counts_train = idx_hist(torch.cat(f_idx_train), len(f))
+
+        areas = self.manifold.areas
+        indices = (f_counts_train * areas).sort().indices
+
+        areas = areas[indices]
+        f_counts_train = f_counts_train[indices]
+        f_counts_sample = f_counts_sample[indices]
+
+        p_train = f_counts_train / (areas * f_counts_train.sum())
+        p_sample = f_counts_sample / (areas * f_counts_sample.sum())
+
+        kl = areas * p_train * torch.log(p_train / p_sample)
+        nll = areas * p_train * torch.log(1 / p_sample)
+        empty = p_train == 0
+        no_samples = ~empty & (p_sample == 0)
+        kl = kl[~empty & ~no_samples]
+        nll = nll[~empty & ~no_samples]
+
+        return {
+            "no_data": ((areas * empty).sum() / areas.sum()).item(),
+            "missing_samples": ((areas * no_samples).sum() / areas.sum()).item(),
+            "sample_kl": kl.sum().item(),
+            "sample_nll": nll.sum().item()
+        }
 
 def make_bunny_data(data_seed=0, **kwargs):
     dataset = MeshDataset(**kwargs)

@@ -12,6 +12,9 @@ class ManifoldDataset(Dataset):
         self.dataset = dataset
         self.manifold = manifold
 
+    def __getattr__(self, item):
+        return getattr(self.dataset, item)
+
     def __getitem__(self, index):
         return self.dataset[index]
 

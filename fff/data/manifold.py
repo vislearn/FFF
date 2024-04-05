@@ -2,7 +2,7 @@ try:
     from geomstats.geometry.manifold import Manifold
 except ImportError:
     Manifold = object
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Subset
 import torch
 from functools import wraps
 
@@ -13,7 +13,11 @@ class ManifoldDataset(Dataset):
         self.manifold = manifold
 
     def __getattr__(self, item):
-        return getattr(self.dataset, item)
+        try:
+            return getattr(self.dataset, item)
+        except AttributeError:
+            if isinstance(self.dataset, Subset):
+                return getattr(self.dataset.dataset, item)
 
     def __getitem__(self, index):
         return self.dataset[index]

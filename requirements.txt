@@ -18,3 +18,4 @@ sbi
 cython
 sbibm
 geomstats
+pyevtk

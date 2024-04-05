@@ -1,6 +1,7 @@
 import os
 from enum import Enum
 from typing import Any, Tuple
+from tqdm.auto import trange
 
 import igl
 import numpy as np
@@ -465,7 +466,7 @@ class MeshDataset(Dataset):
 
         v = mesh.v.to(model.device)
         f = mesh.f.to(model.device)
-        for i in range(sample_count // batch_size):
+        for i in trange(sample_count // batch_size):
             with torch.no_grad():
                 samples = model.sample((batch_size,))
 

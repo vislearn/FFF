@@ -461,19 +461,23 @@ class MeshDataset(Dataset):
         f_idx_sample = []
         f_idx_train = []
 
-        v = model.train_data.manifold.v.cuda()
-        f = model.train_data.manifold.f.cuda()
+        mesh = self.manifold()
+
+        v = mesh.v.to(model.device)
+        f = mesh.f.to(model.device)
         for i in range(sample_count // batch_size):
             with torch.no_grad():
                 samples = model.sample((batch_size,))
 
             f_idx_sample.append(closest_point(samples, v, f)[1].cpu())
+            train_batch = model.train_data[i * batch_size:(i + 1) * batch_size][0].to(model.device)
             f_idx_train.append(
-                closest_point(model.train_data[i * batch_size:(i + 1) * batch_size][0].cuda(), v, f)[1].cpu())
+                closest_point(train_batch, v, f)[1].cpu()
+            )
         f_counts_sample = idx_hist(torch.cat(f_idx_sample), len(f))
         f_counts_train = idx_hist(torch.cat(f_idx_train), len(f))
 
-        areas = self.manifold.areas
+        areas = mesh.areas
         indices = (f_counts_train * areas).sort().indices
 
         areas = areas[indices]
@@ -496,6 +500,7 @@ class MeshDataset(Dataset):
             "sample_kl": kl.sum().item(),
             "sample_nll": nll.sum().item()
         }
+
 
 def make_bunny_data(data_seed=0, **kwargs):
     dataset = MeshDataset(**kwargs)

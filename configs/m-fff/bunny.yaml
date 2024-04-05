@@ -11,7 +11,7 @@ data_set:
 loss_weights:
   noisy_reconstruction: 1000
   nll: 1
-  z_projection: 10
+  z_projection: 100
   x1_projection: 10
   x_sample_reconstruction: 10
   z_sample_reconstruction: 10

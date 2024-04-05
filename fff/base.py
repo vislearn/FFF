@@ -361,7 +361,8 @@ class FreeFormBase(Trainable):
 
     def intermediate_reconstructions(self, decoder_intermediates, encoder_intermediates):
         regularizations = {}
-        regularizations["intermediate_reconstruction_all"] = 0.0
+        if len(decoder_intermediates) > 1:
+            regularizations["intermediate_reconstruction_all"] = 0.0
         for idx, (a, b) in enumerate(zip(encoder_intermediates[:-1], decoder_intermediates[-1:0:-1])):
             intermediate_loss = torch.sum((a - b).reshape(a.shape[0], -1) ** 2, -1)
             regularizations[f"intermediate_reconstruction_{idx}"] = intermediate_loss

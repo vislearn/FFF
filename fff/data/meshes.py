@@ -224,7 +224,7 @@ class Mesh(Manifold):
             upsample: int = 0,
     ):
         super().__init__(
-            2, (3,), "extrinsic", True
+            2, (3,), "extrinsic", False
         )
 
         if upsample > 0:
@@ -305,16 +305,25 @@ class Mesh(Manifold):
     def projection(self, x):
         return self.projx(x)
 
+    def ensure_device(self, device):
+        self.v = self.v.to(device)
+        self.f = self.f.to(device)
+        self.eigvals = self.eigvals.to(device)
+        self.eigfns = self.eigfns.to(device)
+
     ## Below is copied from Ricky's code
 
     def projx(self, x: torch.Tensor) -> torch.Tensor:
-        x, _ = closest_point(x, self.v.to(x.device, non_blocking=True), self.f.to(x.device, non_blocking=True))
+        self.ensure_device(x.device)
+        x, _ = closest_point(x, self.v, self.f)
         return x
 
     def proju(self, x: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
+        self.ensure_device(x.device)
+
         # determine which face the point is on
-        _, f_idx = closest_point(x, self.v.to(x.device, non_blocking=True), self.f.to(x.device, non_blocking=True))
-        vs = self.v.to(x.device, non_blocking=True)[self.f.to(x.device, non_blocking=True)[f_idx]]
+        _, f_idx = closest_point(x, self.v, self.f)
+        vs = self.v[self.f[f_idx]]
 
         # compute normal for each face
         n = face_normal(a=vs[:, 0], b=vs[:, 1], c=vs[:, 2])
@@ -381,7 +390,7 @@ class Mesh(Manifold):
         return torch.sum(self.areas)
 
     def uniform_logprob(self, x):
-        tot_area = self.volume()
+        tot_area = self.volume
         return torch.full_like(x[..., 0], -torch.log(tot_area))
 
     def random_base(self, *args, **kwargs):
@@ -416,10 +425,55 @@ class Mesh(Manifold):
         raise NotImplementedError
 
 
+class ProjectionManifold(Manifold):
+    def __init__(self, dim, shape, projection, sampler, volume=None):
+        super().__init__(dim, shape, "extrinsic", False)
+        self.projection = projection
+        self.sampler = sampler
+        if volume is not None:
+            self.volume = volume
+
+    def belongs(self, point, atol=gs.atol):
+        return torch.norm(self.projection(point) - point, dim=-1) < atol
+
+    def is_tangent(self, vector, base_point, atol=gs.atol):
+        tangent = self.to_tangent(vector, base_point)
+        return torch.norm(tangent - vector, dim=-1) < atol
+
+    def to_tangent(self, vector, base_point):
+        output, jvp = torch.func.jvp(self.projection, (base_point,), (vector,))
+        return jvp
+
+    def random_point(self, n_samples=1, bound=1.0):
+        points = self.sampler(n_samples)
+        return self.projection(points)
+
+    def random_uniform(self, n_samples):
+        return self.random_point(n_samples)
+
+
+class ClosedSurfaceProjection(torch.nn.Module):
+    def __init__(self, encoder, decoder):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+
+        for param in self.parameters():
+            param.requires_grad = False
+
+    def forward(self, x):
+        if x.device != next(iter(self.parameters())).device:
+            self.encoder.to(x.device)
+            self.decoder.to(x.device)
+        z = x + self.encoder(x)
+        z = z / torch.linalg.norm(z, dim=-1, keepdim=True)
+        return z + self.decoder(z)
+
+
 class MeshDataset(Dataset):
     dim = 3
 
-    def __init__(self, root: str, data_file: str, obj_file: str, scale=1 / 250):
+    def __init__(self, root: str, data_file: str, obj_file: str, manifold_projection: str = None, scale=1 / 250):
         with open(os.path.join(root, data_file), "rb") as f:
             data = np.load(f)
 
@@ -428,9 +482,17 @@ class MeshDataset(Dataset):
         self.v = torch.tensor(v).float() * scale
         self.f = torch.tensor(f).long()
         self.data = torch.tensor(data).float() * scale
+        self.mesh = Mesh(self.v, self.f)
 
-    def manifold(self, *args, **kwargs):
-        return Mesh(self.v, self.f, *args, **kwargs)
+        if manifold_projection is not None:
+            encoder_decoder = torch.load(os.path.abspath(os.path.join(root, manifold_projection)))
+            self.manifold_projection = ClosedSurfaceProjection(**encoder_decoder)
+
+    def manifold(self):
+        mesh = self.mesh
+        if hasattr(self, "manifold_projection"):
+            return ProjectionManifold(mesh.dim, mesh.shape, self.manifold_projection, mesh.random_uniform)
+        return mesh
 
     def __len__(self):
         return len(self.data)
@@ -438,7 +500,7 @@ class MeshDataset(Dataset):
     def __getitem__(self, idx):
         return self.data[idx],
 
-    def compute_metrics(self, model):
+    def compute_metrics(self, model, sample_count=1000000, batch_size=10000):
         """
         Compare the face the model generates samples in to the
         faces that the data has triangles in.
@@ -449,20 +511,16 @@ class MeshDataset(Dataset):
         - What area of triangles are not sampled where the data has data?
         - KL & NLL to distribution fit to sampled data (via triangles)
         """
-        sample_count = 1000000
-        batch_size = 10000
-
         def idx_hist(f_idx, tot_count):
             indices, count = torch.unique(f_idx, return_counts=True)
             f_counts = torch.zeros(tot_count, dtype=int)
             f_counts[indices] = count
             return f_counts
 
-
         f_idx_sample = []
         f_idx_train = []
 
-        mesh = self.manifold()
+        mesh = self.mesh
 
         v = mesh.v.to(model.device)
         f = mesh.f.to(model.device)

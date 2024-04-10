@@ -6,10 +6,11 @@ data_set:
   root: data/mesh
   data_file: bunny_eigfn009.npy
   obj_file: bunny_simp.obj
+  manifold_projection: bunny_ae.pt
 
 
 loss_weights:
-  noisy_reconstruction: 1000
+  noisy_reconstruction: 300
   nll: 1
   z_projection: 100
   x1_projection: 10

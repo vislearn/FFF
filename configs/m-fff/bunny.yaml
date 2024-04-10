@@ -18,7 +18,8 @@ loss_weights:
   z_sample_reconstruction: 10
 
 noise: 0.0
-exact_train_nll_every: 10
+exact_train_nll_every: 100
+skip_val_nll: 1  # Skip validation nll computation to save time
 
 # models.0.latent_dim: 2
 models:

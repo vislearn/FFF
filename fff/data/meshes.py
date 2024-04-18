@@ -543,9 +543,9 @@ class MeshDataset(Dataset):
                 samples = model.sample((batch_size,))
 
             f_idx_sample.append(closest_point(samples, v, f)[1].cpu())
-            train_batch = model.train_data[i * batch_size:(i + 1) * batch_size][0].to(model.device)
+            data_batch = self[i * batch_size:(i + 1) * batch_size][0].to(model.device)
             f_idx_train.append(
-                closest_point(train_batch, v, f)[1].cpu()
+                closest_point(data_batch, v, f)[1].cpu()
             )
         f_counts_sample = idx_hist(torch.cat(f_idx_sample), len(f))
         f_counts_train = idx_hist(torch.cat(f_idx_train), len(f))

@@ -1,6 +1,8 @@
 import os
 from enum import Enum
 from typing import Any, Tuple
+
+import trimesh.creation
 from tqdm.auto import trange
 
 import igl
@@ -473,25 +475,37 @@ class ClosedSurfaceProjection(torch.nn.Module):
 class MeshDataset(Dataset):
     dim = 3
 
-    def __init__(self, root: str, data_file: str, obj_file: str, manifold_projection: str = None, scale=1 / 250):
-        with open(os.path.join(root, data_file), "rb") as f:
-            data = np.load(f)
+    def __init__(self, root: str, data, vertices = None, faces = None,
+                 obj_file: str = None, manifold_projection = None, scale=1 / 250):
+        if isinstance(data, str):
+            with open(os.path.join(root, data), "rb") as f:
+                data = np.load(f)
 
-        v, f = igl.read_triangle_mesh(os.path.join(root, obj_file))
+        if isinstance(obj_file, str):
+            assert vertices is None and faces is None, "Cannot specify both obj_file and vertices/faces"
+            vertices, faces = igl.read_triangle_mesh(os.path.join(root, obj_file))
 
-        self.v = torch.tensor(v).float() * scale
-        self.f = torch.tensor(f).long()
+        self.v = torch.tensor(vertices).float() * scale
+        self.f = torch.tensor(faces).long()
         self.data = torch.tensor(data).float() * scale
         self.mesh = Mesh(self.v, self.f)
 
         if manifold_projection is not None:
-            encoder_decoder = torch.load(os.path.abspath(os.path.join(root, manifold_projection)))
-            self.manifold_projection = ClosedSurfaceProjection(**encoder_decoder)
+            if isinstance(manifold_projection, str):
+                encoder_decoder = torch.load(os.path.abspath(os.path.join(root, manifold_projection)))
+                self.manifold_projection = ClosedSurfaceProjection(**encoder_decoder)
+            else:
+                self.manifold_projection = manifold_projection
 
     def manifold(self):
         mesh = self.mesh
         if hasattr(self, "manifold_projection"):
-            return ProjectionManifold(mesh.dim, mesh.shape, self.manifold_projection, mesh.random_uniform)
+            try:
+                volume = self.mesh.volume
+            except AttributeError:
+                volume = None
+            return ProjectionManifold(mesh.dim, mesh.shape, self.manifold_projection, mesh.random_uniform,
+                                      volume=volume)
         return mesh
 
     def __len__(self):

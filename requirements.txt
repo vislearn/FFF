@@ -19,3 +19,4 @@ cython
 sbibm
 geomstats
 pyevtk
+libigl

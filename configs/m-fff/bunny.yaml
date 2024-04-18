@@ -10,7 +10,7 @@ data_set:
 
 
 loss_weights:
-  noisy_reconstruction: 300
+  noisy_reconstruction: 1000
   nll: 1
   z_projection: 100
   x1_projection: 10
@@ -36,7 +36,7 @@ lr_scheduler:
   kwargs:
     gamma: 0.99999
   interval: step
-max_epochs: 600
+max_epochs: 1200
 batch_size: 1024
 
 latent_distribution:

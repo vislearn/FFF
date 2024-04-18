@@ -34,8 +34,8 @@ models:
 lr_scheduler:
   name: ExponentialLR
   kwargs:
-    gamma: 0.99999
-  interval: step
+    gamma: 0.9961
+  interval: epoch
 max_epochs: 1200
 batch_size: 1024
 

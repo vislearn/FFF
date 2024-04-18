@@ -475,7 +475,7 @@ class ClosedSurfaceProjection(torch.nn.Module):
 class MeshDataset(Dataset):
     dim = 3
 
-    def __init__(self, root: str, data, vertices = None, faces = None,
+    def __init__(self, data, vertices = None, faces = None, root: str = None,
                  obj_file: str = None, manifold_projection = None, scale=1 / 250):
         if isinstance(data, str):
             with open(os.path.join(root, data), "rb") as f:
@@ -594,3 +594,13 @@ def make_bunny_data(data_seed=0, **kwargs):
         ManifoldDataset(dataset, manifold=manifold)
         for dataset in datasets
     ]
+
+
+if __name__ == '__main__':
+    data = torch.randn(1024, 3)
+    data /= data.norm(dim=-1, keepdim=True)
+
+    ico = trimesh.creation.icosphere(3)
+    dataset = MeshDataset(data, vertices=ico.vertices, faces=ico.faces)
+    some_points = dataset.manifold().random_point(10)
+    dataset.manifold().projection(some_points)

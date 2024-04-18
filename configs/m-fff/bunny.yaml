@@ -4,7 +4,7 @@ accelerator: gpu
 data_set:
   name: bunny
   root: data/mesh
-  data_file: bunny_eigfn009.npy
+  data: bunny_eigfn009.npy
   obj_file: bunny_simp.obj
   manifold_projection: bunny_ae.pt
 

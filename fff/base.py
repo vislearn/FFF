@@ -69,6 +69,8 @@ class FreeFormBase(Trainable):
         try:
             self._data_dim = train_data.data_dim
             self._data_cond_dim = train_data.cond_dim
+            if self._data_cond_dim is None or self._data_dim is None:
+                raise AttributeError
         except AttributeError:
             data_sample = train_data[0]
             self._data_dim = prod(data_sample[0].shape)
@@ -364,6 +366,11 @@ class FreeFormBase(Trainable):
         if len(decoder_intermediates) > 1:
             regularizations["intermediate_reconstruction_all"] = 0.0
         for idx, (a, b) in enumerate(zip(encoder_intermediates[:-1], decoder_intermediates[-1:0:-1])):
+            if a.shape != b.shape:
+                try:
+                    b = b.view(a.shape)
+                except Exception as e:
+                    raise ValueError(f"Shapes do not match for intermediate reconstruction {idx}: {a.shape} vs {b.shape}") from e
             intermediate_loss = torch.sum((a - b).reshape(a.shape[0], -1) ** 2, -1)
             regularizations[f"intermediate_reconstruction_{idx}"] = intermediate_loss
             regularizations["intermediate_reconstruction_all"] += intermediate_loss
@@ -561,7 +568,7 @@ class FreeFormBase(Trainable):
         try:
             for key, value in self.val_data.compute_metrics(self).items():
                 self.log(f"validation/{key}", value)
-        except AttributeError:
+        except (AttributeError, TypeError):
             pass
 
     def on_fit_end(self) -> None:

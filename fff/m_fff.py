@@ -79,13 +79,25 @@ class ManifoldFreeFormFlow(FreeFormBase):
         z, jac_enc = self._encoder_jac(x, c, **kwargs)
         projected = project_jac_to_manifold(jac_enc, x, z, self.manifold)
         log_det = projected.slogdet()[1]
+        log_det += self._metric_volume_change(x, z)
         return VolumeChangeResult(z, log_det, {})
 
     def _decoder_volume_change(self, z, c, **kwargs) -> VolumeChangeResult:
         x1, jac_dec = self._decoder_jac(z, c, **kwargs)
         projected = project_jac_to_manifold(jac_dec, z, x1, self.manifold)
         log_det = projected.slogdet()[1]
+        log_det += self._metric_volume_change(z, x1)
         return VolumeChangeResult(x1, log_det, {})
+
+    def _metric_volume_change(self, input, output) -> torch.Tensor | float:
+        metric = self.manifold.default_metric()(self.manifold)
+        if hasattr(metric, "metric_matrix_log_det"):
+            metric_volume_change = 0.5 * (
+                metric.metric_matrix_log_det(output)
+                - metric.metric_matrix_log_det(input)
+            )
+            return metric_volume_change
+        return 0.0
 
     def surrogate_log_prob(self, x, c, **kwargs) -> LogProbResult:
         # Then compute JtJ

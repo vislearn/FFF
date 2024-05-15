@@ -104,6 +104,15 @@ def nll_surrogate(x: torch.Tensor, encode: Transform, decode: Transform,
     # Per-sample negative log-likelihood
     nll = sum_except_batch((z ** 2)) / 2 - surrogate
 
+    if manifold is not None:
+        metric = manifold.default_metric()(manifold)
+        if hasattr(metric, "metric_matrix_log_det"):
+            metric_volume_change = 0.5 * (
+                metric.metric_matrix_log_det(z) - metric.metric_matrix_log_det(x)
+            )
+            metrics["metric_volume_change"] = sum_except_batch(metric_volume_change)
+            nll += sum_except_batch(metric_volume_change)
+
     return SurrogateOutput(z, x1, nll, surrogate, metrics)
 
 

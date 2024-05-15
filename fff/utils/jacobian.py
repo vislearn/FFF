@@ -26,3 +26,16 @@ def compute_jacobian(x_in, fn, *func_args, chunk_size=None, grad_type="backward"
             )
             jac, x_out = fn_jac_batched(x_in, *func_args)
     return x_out, jac
+
+
+@torch.no_grad()
+def compute_volume_change(func, input):
+    output, jac = compute_jacobian(input, func)
+
+    if jac.shape[-1] < jac.shape[-2]:
+        jac_prod_fn = lambda x: x.T @ x
+    else:
+        jac_prod_fn = lambda x: x @ x.T
+
+    jac_prod = vmap(jac_prod_fn)(jac)
+    return output, torch.slogdet(jac_prod)[1]

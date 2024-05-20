@@ -100,12 +100,9 @@ class PoincareDiskWrappedDistribution(WrappedAtOriginDistribution):
         return v
 
     def volume_change(self, v: torch.Tensor) -> torch.Tensor:
-        # norm = v.norm(dim=-1)
-        # vol_change_exp = -torch.log(torch.tanh(norm) / (norm * torch.cosh(norm) ** 2))
-        # point = fix_device(self.metric.exp)(v, self.origin)
-        # vol_change_metric = -0.5 * self.metric.metric_matrix_log_det(point)
-        _, volume_change_exp = self.metric.exp0_with_jac_log_det(v)
-        return - volume_change_exp
+        point, volume_change_exp = self.metric.exp0_with_jac_log_det(v)
+        vol_change_metric = self.metric.metric_matrix_log_det(point)
+        return - volume_change_exp - 0.5 * vol_change_metric
 
 
 class HyperboloidWrappedDistribution(WrappedAtOriginDistribution):

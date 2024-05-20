@@ -13,9 +13,8 @@ from torch.utils.data import DataLoader, IterableDataset
 
 import fff.data
 from fff.distributions.multivariate_student_t import MultivariateStudentT
-from fff.loss import nll_surrogate
+from fff.loss import nll_surrogate, compute_jacobian
 from fff.model.utils import TrainWallClock
-from fff.utils.jacobian import compute_jacobian
 
 
 class ModelHParams(HParams):

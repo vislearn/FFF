@@ -4,7 +4,7 @@ from math import prod
 
 import torch
 
-from fff.model.utils import batch_wrap
+from fff.loss import batch_wrap
 
 try:
     from torch.func import vmap, jacrev, jacfwd

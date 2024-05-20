@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2023 Computer Vision and Learning Lab, Heidelberg
+# Copyright (c) 2024 Computer Vision and Learning Lab, Heidelberg
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -19,16 +19,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import functools
 from collections import namedtuple
+from functools import wraps, partial
 from math import sqrt, prod
 from typing import Union, Callable
 
 import torch
+from torch import vmap
+from torch._functorch.eager_transforms import jacrev, jacfwd
 from torch.autograd import grad
 from torch.autograd.forward_ad import dual_level, make_dual, unpack_dual
 
 SurrogateOutput = namedtuple("SurrogateOutput", ["z", "x1", "nll", "surrogate", "regularizations"])
+ExactOutput = namedtuple("ExactOutput", ["z", "x1", "nll"])
 Transform = Callable[[torch.Tensor], torch.Tensor]
 
 
@@ -137,3 +141,72 @@ def sum_except_batch(x: torch.Tensor) -> torch.Tensor:
     :return: Sum over all dimensions except the first.
     """
     return torch.sum(x.reshape(x.shape[0], -1), dim=1)
+
+
+def batch_wrap(fn):
+    """
+    Add a batch dimension to each tensor argument.
+
+    :param fn:
+    :return:
+    """
+
+    def deep_unsqueeze(arg):
+        if torch.is_tensor(arg):
+            return arg[None, ...]
+        elif isinstance(arg, dict):
+            return {key: deep_unsqueeze(value) for key, value in arg.items()}
+        elif isinstance(arg, (list, tuple)):
+            return [deep_unsqueeze(value) for value in arg]
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        args = deep_unsqueeze(args)
+        return fn(*args, **kwargs)[0]
+
+    return wrapper
+
+
+def double_output(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        out = fn(*args, **kwargs)
+        return out, out
+
+    return wrapper
+
+
+def compute_jacobian(x_in, fn, *func_args, chunk_size=None, grad_type="backward", **func_kwargs):
+    jacfn = jacrev if grad_type == "backward" else jacfwd
+    with torch.inference_mode(False):
+        with torch.no_grad():
+            fn_kwargs_prefilled = partial(fn, **func_kwargs)
+            fn_batch_expanded = batch_wrap(fn_kwargs_prefilled)
+            fn_return_val = double_output(fn_batch_expanded)
+            fn_jac_batched = vmap(
+                jacfn(fn_return_val, has_aux=True), chunk_size=chunk_size
+            )
+            jac, x_out = fn_jac_batched(x_in, *func_args)
+    return x_out, jac
+
+
+def nll_exact(x: torch.Tensor, encode: Transform, decode: Transform,
+              latent: torch.distributions.Distribution, **kwargs) -> ExactOutput:
+    """
+    Compute the nll of the decoder.
+
+    It will return a lower bound (unless the decoder is invertible)
+    of the probability density the decoder assigns to the points
+    x1 = decode(encode(x)) -- if the reconstruction is good, then this
+    is a good approximation of the nll by the dataset.
+
+    :param x:
+    :param encode:
+    :param decode:
+    :param latent:
+    :param kwargs: Are passed to compute_jacobian
+    :return:
+    """
+    z = encode(x)
+    x1, dec_jac = compute_jacobian(z, decode)
+    return ExactOutput(z, x1, -latent.log_prob(z) + torch.slogdet(dec_jac).logabsdet)

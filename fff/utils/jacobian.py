@@ -38,4 +38,4 @@ def compute_volume_change(func, input):
         jac_prod_fn = lambda x: x @ x.T
 
     jac_prod = vmap(jac_prod_fn)(jac)
-    return output, torch.slogdet(jac_prod)[1]
+    return output, 0.5 * torch.slogdet(jac_prod)[1]

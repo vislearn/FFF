@@ -4,6 +4,7 @@ import torch
 
 from fff.base import FreeFormBase, FreeFormBaseHParams, VolumeChangeResult, LogProbResult
 from fff.loss import nll_surrogate
+from fff.data.manifold import fix_device
 
 
 class ManifoldFreeFormFlowHParams(FreeFormBaseHParams):
@@ -48,6 +49,9 @@ class ManifoldFreeFormFlow(FreeFormBase):
             from fff.distributions.von_mises_fisher import VonMisesFisherMixtureDistribution
             with torch.inference_mode(False):
                 return VonMisesFisherMixtureDistribution(self.manifold, **kwargs)
+        elif name == "manifold-wrapped-standard-normal":
+            from fff.distributions.wrapped_at_origin import get_wrapped_normal_distribution
+            return get_wrapped_normal_distribution(self.manifold, device=device, **kwargs)
         else:
             raise ValueError(f"Unknown latent distribution: {name!r}")
 
@@ -144,7 +148,7 @@ class ManifoldFreeFormFlow(FreeFormBase):
 
     def _reconstruction_loss(self, a, b):
         if self.hparams.manifold_distance:
-            return self.manifold.metric.squared_dist(a, b)
+            return fix_device(self.manifold.metric.squared_dist)(a, b)
         return super()._reconstruction_loss(a, b)
 
 

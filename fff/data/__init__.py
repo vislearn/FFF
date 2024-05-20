@@ -44,6 +44,15 @@ def load_dataset(name: str, **kwargs) -> TrainValTest:
         elif name == "torus_rna":
             from .torus import get_torus_rna_dataset
             return get_torus_rna_dataset(**kwargs)
+    elif name == "hyperbolic-wrapped-normal":
+        from .hyperbolic import get_hyperbolic_wrapped_normal_dataset
+        return get_hyperbolic_wrapped_normal_dataset(**kwargs)
+    elif name == "mcnf":
+        from .hyperbolic import get_mcnf_data
+        return get_mcnf_data(**kwargs)
+    elif name == "hyperbolic_toy":
+        from .hyperbolic import get_hyperbolic_toy_dataset
+        return get_hyperbolic_toy_dataset(**kwargs)
     elif name in ["fire", "flood", "quakes", "volcano"]:
         from .earth import get_earth_dataset
         return get_earth_dataset(name, **kwargs)

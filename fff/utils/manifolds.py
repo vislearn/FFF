@@ -27,6 +27,16 @@ class PoincareBallMetric_(PoincareBallMetric):
         lambda_base = 2 / (1 - gs.sum(base_point * base_point, axis=-1))
         return 2 * self._space.dim * gs.log(lambda_base)
 
+    def exp0_with_jac_log_det(self, tangent_vec):
+        origin = gs.zeros_like(tangent_vec[0, ...])
+        point = self.exp(tangent_vec, base_point=origin)
+        norm_tangent_vec = gs.linalg.norm(tangent_vec, axis=-1)
+        jac_log_det = torch.log(
+            gs.tanh(norm_tangent_vec)
+            / (norm_tangent_vec * gs.cosh(norm_tangent_vec) ** 2)
+        )
+        return point, jac_log_det
+
 
 class Hyperboloid_(Hyperboloid):
     """fixes vmap incompatibility of Hyperboloid regularize method."""

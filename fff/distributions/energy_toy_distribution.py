@@ -55,13 +55,16 @@ class EnergyDistribution(Distribution):
 
     @property
     def support(self):
-        return EnergyConstraint(self.energy_fn)
+        return EnergyConstraint(self.energy_fn, self.R, self.loc)
 
 
 class EnergyConstraint(Constraint):
-    def __init__(self, energy_fn, *args, **kwargs):
+    def __init__(self, energy_fn, R, loc, *args, **kwargs):
         self.energy_fn = energy_fn
+        self.R = R
+        self.loc = loc
         super().__init__(*args, **kwargs)
 
     def check(self, value):
+        value = (self.R.T @ (value - self.loc).T).T
         return (self.energy_fn(value) > 0.0).unsqueeze(-1)

@@ -1,0 +1,58 @@
+model: fff.ManifoldFreeFormFlow
+
+data_set:
+  name: hyperbolic_toy
+  subtype: one_wrapped
+
+noise: 0.0
+
+latent_distribution:
+  name: manifold-wrapped-standard-normal
+  tangent_scale: 0.5
+
+loss_weights:
+  nll: 1
+  noisy_reconstruction: 100
+  z_reconstruction: 10
+  x_sample_reconstruction: 10
+  x1_projection: 1
+  z_projection: 1
+manifold_distance: False
+
+models:
+  - name: fff.model.ResNet
+    latent_dim: data
+    layers_spec:
+      [
+        [256, 256, 256],
+        [256, 256, 256],
+        [256, 256, 256],
+        [256, 256, 256],
+        [256, 256, 256],
+        [256, 256, 256],
+      ]
+    activation: "silu"
+
+batch_size: 8192
+
+optimizer:
+  name: adam
+  lr: 0.0002
+  weight_decay: 0.001
+
+lr_scheduler:
+  name: ExponentialLR
+  kwargs:
+    gamma: 0.9961
+  interval: epoch
+max_epochs: 1200
+batch_size: 1024
+
+accelerator: "gpu"
+num_workers: 0
+
+model_checkpoint:
+  monitor: "auto"
+  save_last: True
+  every_n_epochs: 5
+  save_top_k: 5

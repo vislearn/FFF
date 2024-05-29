@@ -2,20 +2,20 @@ model: fff.ManifoldFreeFormFlow
 
 data_set:
   name: hyperbolic_toy
-  subtype: swish_v2
+  subtype: one_wrapped
 
 noise: 0.0
 
 latent_distribution:
   name: manifold-wrapped-standard-normal
-  tangent_scale: 0.5
+  tangent_scale: 0.2
 
 loss_weights:
   nll: 1
   noisy_reconstruction: 1000
   z_reconstruction: 100
   x_sample_reconstruction: 100
-  x1_projection: 100
+  x1_projection: 1
   z_projection: 1
 manifold_distance: False
 
@@ -24,21 +24,23 @@ models:
     latent_dim: data
     layers_spec:
       [
-        [128, 128, 128],
-        [128, 128, 128],
-        [128, 128, 128],
+        [128, 128],
+        [128, 128],
       ]
     activation: "silu"
-
-batch_size: 4096
 
 optimizer:
   name: adam
   lr: 0.0002
   weight_decay: 0.001
 
-lr_scheduler: "onecyclelr"
-max_epochs: 20000
+lr_scheduler:
+  name: ExponentialLR
+  kwargs:
+    gamma: 0.9986
+  interval: epoch
+max_epochs: 4200
+batch_size: 4096
 
 accelerator: "gpu"
 num_workers: 0

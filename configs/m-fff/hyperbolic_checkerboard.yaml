@@ -12,7 +12,7 @@ latent_distribution:
 
 loss_weights:
   nll: 1
-  noisy_reconstruction: 100
+  noisy_reconstruction: 1000
   z_reconstruction: 100
   x_sample_reconstruction: 100
   x1_projection: 100
@@ -35,15 +35,11 @@ models:
 
 optimizer:
   name: adam
-  lr: 0.001
+  lr: 0.0001
   weight_decay: 0.001
 
-lr_scheduler:
-  name: ExponentialLR
-  kwargs:
-    gamma: 0.9981
-  interval: epoch
-max_epochs: 3600
+lr_scheduler: onecyclelr
+max_epochs: 30000
 batch_size: 4096
 
 accelerator: "gpu"

@@ -214,33 +214,6 @@ def get_five_gaussians_distribution(
 
 
 def get_swish_distribution(
-    s: float = 0.7,
-    var: tuple = (0.2, 0.6),
-    wrapped_distribution: Type[Distribution] = PoincareDiskWrappedDistribution,
-) -> Distribution:
-    locs = torch.tensor(
-        [
-            [s, s],
-            [-s, -s],
-            [-s, s],
-            [s, -s],
-        ]
-    )
-
-    scales = torch.tensor(
-        [[var[0], var[1]], [var[0], var[1]], [var[1], var[0]], [var[1], var[0]]]
-    )
-
-    tangent_distributions = [Normal(locs[i], scales[i]) for i in range(4)]
-    components = [
-        wrapped_distribution(tangent_distributions[i], locs[i]) for i in range(4)
-    ]
-    mix = Categorical(torch.ones(4) / 4)
-
-    return MixtureDistribution(mix, components, finite_support=False)
-
-
-def get_swish_distribution_v2(
     wrapped_distribution: Type[Distribution] = PoincareDiskWrappedDistribution,
 ):
     locs = torch.tensor([[1, 0], [0, 1], [-1, 0], [0, -1]]) * 0.6
@@ -267,7 +240,7 @@ def get_swish_distribution_v2(
     )
 
 
-def get_one_wrapped_distribution(
+def get_one_gaussian_distribution(
     wrapped_distribution: Type[Distribution] = PoincareDiskWrappedDistribution,
 ) -> Distribution:
     scale = torch.tensor([0.3, 0.3])

@@ -1,8 +1,5 @@
-import torch
 from torch.utils.data import TensorDataset
 import numpy as np
-
-from math import pi
 
 from .utils import split_dataset
 from .manifold import ManifoldDataset
@@ -12,7 +9,7 @@ from fff.distributions.wrapped_at_origin import (
     get_checkerboard_distribution,
     get_five_gaussians_distribution,
     get_swish_distribution,
-    get_one_gaussian,
+    get_one_gaussian_distribution,
 )
 
 
@@ -21,9 +18,9 @@ def get_hyperbolic_toy_dataset(subtype: str, seed: int = np.random.seed()):
         distribution = get_checkerboard_distribution()
     elif subtype == "five_gaussians":
         distribution = get_five_gaussians_distribution()
-    elif subtype == "swish":
+    elif subtype in ["swish", "swish_v2"]:  # swish_v2 only for old experiments
         distribution = get_swish_distribution()
-    elif subtype == "one_wrapped":
+    elif subtype in ["one_gaussian", "one_wrapped"]:  # one_wrapped only for old experiments
         distribution = get_one_gaussian_distribution()
     else:
         raise ValueError(f"Unknown subtype: {subtype}")

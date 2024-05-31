@@ -12,11 +12,13 @@ def project_jac_to_tangent_space(
     """Project the Jacobian of a function from x_in to x_out to the tangent
     space of the manifold at x_in and x_out.
 
-    :param jac: Jacobian of the function from x_in to x_out.
-    :param x_in: Input points.
-    :param x_out: Output points.
+    :param jac: Jacobian of the function from x_in to x_out. Shape:
+        (batch_size, embedding_dim, embedding_dim).
+    :param x_in: Input points. Shape: (batch_size, embedding_dim).
+    :param x_out: Output points. Shape: (batch_size, embedding_dim).
     :param manifold: Manifold on which the points lie.
-    :return: Projected Jacobian."""
+    :return: Projected Jacobian. Shape:
+        (batch_size, manifold_dim, manifold_dim)."""
 
     bases = []
     # Compute a basis each for x, z, and x1

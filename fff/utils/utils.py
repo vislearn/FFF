@@ -34,8 +34,8 @@ def get_latest_run(
 
 def sum_except_batch(x: torch.Tensor) -> torch.Tensor:
     """Sum over all dimensions except the first.
-    :param x: Input tensor.
-    :return: Sum over all dimensions except the first.
+    :param x: Input tensor. Shape: (batch_size, ...)
+    :return: Sum over all dimensions except the first. Shape: (batch_size,)
     """
     return torch.sum(x.reshape(x.shape[0], -1), dim=1)
 

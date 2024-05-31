@@ -20,19 +20,20 @@ def volume_change_exact(
     decode: Transform,
     manifold: Manifold | None = None,
 ) -> ExactOutput:
-    """Computes the exact volume change term in the change of variables formula.
-    Uses the negative volume change induced by the decode function.
+    """Computes the exact volume change term in the change of variables
+    formula. Uses the negative volume change induced by the decode function.
 
-    :param x: The input tensor of shape (batch_size, ...)
-    :param encode: The encoding function that transforms the input tensor to a
-        latent representation z of shape (batch_size, latent_shape).
-    :param decode: The decoding function which reconstructs the input tensor from
-        its latent representation z.
-    :param manifold: Optional manifold. If provided the outputs of encode and decode
-        are projected to the manifold and the volume change is computed in the tangent
-        space of the manifold.
-    :return: The exact volume change term, the latent representation z, the 
-        reconstruction x1 and the regularizations computed on the fly.
+    :param x: Input data. Shape: (batch_size, ...)
+    :param encode: Encoder function. Takes `x` as input and returns a latent
+        representation `z` of shape (batch_size, latent_shape).
+    :param decode: Decoder function. Takes a latent representation `z` as input
+        and returns a reconstruction `x1`.
+    :param manifold: Optional manifold. If provided the outputs of encode and
+        decode are projected to the manifold and the volume change is computed
+        in the tangent space of the manifold.
+    :return: The exact volume change term of shape (batch_size,), the latent
+        representation `z`, the reconstruction `x1` and the regularizations
+        computed on the fly.
     """
 
     regularizations = {}
@@ -76,18 +77,18 @@ def exact_nll(
     exact volume change term in the change of variables formula under
     the decode function.
 
-    :param x: The input tensor of shape (batch_size, ...).
-    :param encode: The encoder function which takes an input of shape
-        (batch_size, ...) and return a latent representation of shape
-        (batch_size, latent_shape).
-    :param decode: The decoder function which takes the latent representation
-        and reconstructs the input.
+    :param x: Input data. Shape: (batch_size, ...)
+    :param encode: Encoder function. Takes `x` as input and returns a latent
+        representation `z` of shape (batch_size, latent_shape).
+    :param decode: Decoder function. Takes a latent representation `z` as input
+        and returns a reconstruction `x1`.
     :param latent_distribution: The latent distribution to use.
     :param manifold: Optional manifold the encoder and decoder should be
         restricted to. If provided, the volume change term is computed
         in the tangent space of this manifold.
-    :return: The negative log likelihood, the latent representation,
-        the reconstruction and additional regularizations computed on the fly.
+    :return: The negative log likelihood if shape (batch_size,), the latent
+        representation `z`, the reconstruction `x1` and additional
+        regularizations computed on the fly.
     """
     exact = volume_change_exact(x, encode, decode, manifold)
     nll = -latent_distribution.log_prob(exact.z)

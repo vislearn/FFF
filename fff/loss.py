@@ -30,8 +30,7 @@ from torch.distributions import Distribution
 from torch.autograd import grad
 from torch.autograd.forward_ad import dual_level, make_dual, unpack_dual
 
-from fff.utils.geometry import random_tangent_vec, project_jac_to_tangent_space
-from fff.utils.func import compute_jacobian, compute_volume_change
+from fff.utils.geometry import random_tangent_vec
 from fff.utils.utils import sum_except_batch
 from fff.utils.types import Transform
 
@@ -49,11 +48,11 @@ def sample_v(
 
     The reference data is used for shape, device and dtype.
 
-    :param x: Reference data.
+    :param x: Reference data. Shape: (batch_size, ...).
     :param hutchinson_samples: Number of Hutchinson samples to draw.
     :param manifold: Optional manifold on which the data lies. If provided,
         the vectors are sampled in the tangent space of the manifold.
-    :return: Random vectors
+    :return: Random vectors of shape (batch_size, ...)
     """
     batch_size, total_dim = x.shape[0], prod(x.shape[1:])
 
@@ -97,16 +96,16 @@ def volume_change_surrogate(
 
     :param x: Input data. Shape: (batch_size, ...)
     :param encode: Encoder function. Takes `x` as input and returns a latent
-        representation z.
-    :param decode: Decoder function. Takes a latent representation z as input
-        and returns a reconstruction x1.
+        representation `z` of shape (batch_size, latent_shape).
+    :param decode: Decoder function. Takes a latent representation `z` as input
+        and returns a reconstruction `x1`.
     :param hutchinson_samples: Number of Hutchinson samples to use for the
         volume change estimator. The number of hutchinson samples must be less
         than or equal to the total dimension of the data.
     :param manifold: Manifold on which the latent space lies. If provided, the
         volume change is computed in the tangent space of the manifold.
-    :return: The computed surrogate, latent representation z, reconstruction
-        x1 and regularization metrics computed on the fly.
+    :return: The computed surrogate of shape (batch_size,), latent representation
+        `z`, reconstruction `x1` and regularization metrics computed on the fly.
     """
     regularizations = {}
     surrogate = 0
@@ -163,7 +162,7 @@ def volume_change_metric(
     representation $f(x) = z$ and the data $x$, respectively.
 
     :param x: Input data. Shape: (batch_size, ...)
-    :param z: Latent representation. Shape: (batch_size, latent_dim)
+    :param z: Latent representation. Shape: (batch_size, latent_shape)
     :param manifold: Manifold. The `default_metric` method of the manifold
         should return the metric that should be used for the volume change
         computation. The metric must have a `metric_matrix_log_det` method
@@ -210,10 +209,9 @@ def fff_loss(
 
     :param x: Input data. Shape: (batch_size, ...)
     :param encode: Encoder function. Takes `x` as input and returns a latent
-        representation of shape (batch_size, latent_dim).
-    :param decode: Decoder function. Takes a latent representation of shape
-        (batch_size, latent_dim) as input and returns a reconstruction of
-        shape (batch_size, ...).
+        representation `z` of shape (batch_size, latent_shape).
+    :param decode: Decoder function. Takes a latent representation `z` as input
+        and returns a reconstruction `x1`.
     :param latent_distribution: Latent distribution of the model.
     :param beta: Weight of the mean squared error.
     :param hutchinson_samples: Number of Hutchinson samples to use for the
@@ -245,12 +243,11 @@ def mfff_loss(
     where $E[v_k^T v_k] = 1$, and $ f'(x) $ and $ g'(z) $ are the Jacobians of
     `encode` and `decode`.
 
-    :param x: Input data of shape (batch_size, ...)
+    :param x: Input data. Shape: (batch_size, ...)
     :param encode: Encoder function. Takes `x` as input and returns a latent
-        representation of shape (batch_size, latent_dim).
-    :param decode: Decoder function. Takes a latent representation of shape
-        (batch_size, latent_dim) as input and returns a reconstruction of
-        shape (batch_size, ...)
+        representation `z` of shape (batch_size, latent_shape).
+    :param decode: Decoder function. Takes a latent representation `z` as input
+        and returns a reconstruction `x1`.
     :param latent_distribution: Latent distribution of the model.
     :param beta: Weight of the mean squared error.
     :param manifold: Manifold on which encode and decode act.
@@ -259,9 +256,7 @@ def mfff_loss(
     :param manifold_distance: If True, use the manifold distance for the
         reconstruction loss. Otherwise, use the Euclidean distance.
     :return: Per-sample loss. Shape: (batch_size,)"""
-    surrogate = volume_change_surrogate(
-        x, encode, decode, hutchinson_samples, manifold
-    )
+    surrogate = volume_change_surrogate(x, encode, decode, hutchinson_samples, manifold)
     if manifold_distance:
         mse = reconstruction_loss(x, surrogate.x1, manifold)
     else:

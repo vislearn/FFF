@@ -61,6 +61,7 @@ def sample_v(
             f"Too many Hutchinson samples: got {hutchinson_samples}, \
                 expected <= {total_dim}"
         )
+    # M-FFF: More than one Hutchinson sample not implemented for M-FFF
     if manifold is not None and hutchinson_samples != 1:
         raise NotImplementedError(
             f"More than one Hutchinson sample not implemented for M-FFF, \

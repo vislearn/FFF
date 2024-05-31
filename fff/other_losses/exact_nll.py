@@ -93,6 +93,8 @@ def exact_nll(
     exact = volume_change_exact(x, encode, decode, manifold)
     nll = -latent_distribution.log_prob(exact.z)
     nll -= exact.exact
+    
+    # M-FFF: Add volume change metric to the NLL
     if manifold is not None:
         nll -= volume_change_metric(x, exact.z, manifold)
 

@@ -104,30 +104,6 @@ def make_inn(inn_spec, *data_dim, zero_init=True):
     return inn
 
 
-def batch_wrap(fn):
-    """
-    Add a batch dimension to each tensor argument.
-
-    :param fn:
-    :return:
-    """
-
-    def deep_unsqueeze(arg):
-        if torch.is_tensor(arg):
-            return arg[None, ...]
-        elif isinstance(arg, dict):
-            return {key: deep_unsqueeze(value) for key, value in arg.items()}
-        elif isinstance(arg, (list, tuple)):
-            return [deep_unsqueeze(value) for value in arg]
-
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        args = deep_unsqueeze(args)
-        return fn(*args, **kwargs)[0]
-
-    return wrapper
-
-
 class RunningBatchNorm(torch.nn.Module):
     """
     Wrap BatchNorm to normalize only using running mean and std,

@@ -1,6 +1,9 @@
 import os
-from typing import Tuple, Type
+from typing import Tuple, Type, Callable
 
+import functools
+
+import torch
 from torch import nn
 
 
@@ -27,3 +30,33 @@ def get_latest_run(
         os.path.join(checkpoint_path, latest_name + ".ckpt"), **kwargs
     )
     return model, latest
+
+
+def sum_except_batch(x: torch.Tensor) -> torch.Tensor:
+    """Sum over all dimensions except the first.
+    :param x: Input tensor.
+    :return: Sum over all dimensions except the first.
+    """
+    return torch.sum(x.reshape(x.shape[0], -1), dim=1)
+
+
+def batch_wrap(fn: Callable) -> Callable:
+    """Add a batch dimension to each tensor argument.
+
+    :param fn:
+    :return:"""
+
+    def deep_unsqueeze(arg):
+        if torch.is_tensor(arg):
+            return arg[None, ...]
+        elif isinstance(arg, dict):
+            return {key: deep_unsqueeze(value) for key, value in arg.items()}
+        elif isinstance(arg, (list, tuple)):
+            return [deep_unsqueeze(value) for value in arg]
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        args = deep_unsqueeze(args)
+        return fn(*args, **kwargs)[0]
+
+    return wrapper

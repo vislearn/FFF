@@ -13,9 +13,9 @@ from torch.utils.data import DataLoader, IterableDataset
 
 import fff.data
 from fff.distributions.multivariate_student_t import MultivariateStudentT
-from fff.loss import nll_surrogate
+from fff.loss import volume_change_surrogate
 from fff.model.utils import TrainWallClock
-from fff.utils.jacobian import compute_jacobian
+from fff.utils.func import compute_jacobian
 
 
 class ModelHParams(HParams):
@@ -346,7 +346,7 @@ class FreeFormBase(Trainable):
             decoder_intermediates.extend(intermediates)
             return x
 
-        out = nll_surrogate(
+        out = volume_change_surrogate(
             x,
             wrapped_encode,
             wrapped_decode,

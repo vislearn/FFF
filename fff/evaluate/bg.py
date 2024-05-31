@@ -16,7 +16,7 @@ from torch.func import jacrev, vmap
 from tqdm.auto import tqdm, trange
 
 from fff.evaluate.utils import load_cache
-from fff.model.utils import batch_wrap
+from fff.utils.utils import batch_wrap
 
 
 def _tgt_info(model):

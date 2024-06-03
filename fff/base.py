@@ -13,8 +13,9 @@ from torch.utils.data import DataLoader, IterableDataset
 
 import fff.data
 from fff.distributions.multivariate_student_t import MultivariateStudentT
-from fff.loss import nll_surrogate, compute_jacobian
+from fff.loss import volume_change_surrogate
 from fff.model.utils import TrainWallClock
+from fff.utils.func import compute_jacobian
 
 
 class ModelHParams(HParams):
@@ -68,6 +69,8 @@ class FreeFormBase(Trainable):
         try:
             self._data_dim = train_data.data_dim
             self._data_cond_dim = train_data.cond_dim
+            if self._data_cond_dim is None or self._data_dim is None:
+                raise AttributeError
         except AttributeError:
             data_sample = train_data[0]
             self._data_dim = prod(data_sample[0].shape)
@@ -208,14 +211,26 @@ class FreeFormBase(Trainable):
             callbacks.append(TrainWallClock())
         return callbacks
 
-    def encode(self, x, c):
+    def encode(self, x, c, intermediate=False):
+        if intermediate:
+            outs = []
         for model in self.models:
             x = model.encode(x, c)
+            if intermediate:
+                outs.append(x)
+        if intermediate:
+            x = x, outs
         return x
 
-    def decode(self, z, c):
+    def decode(self, z, c, intermediate=False):
+        if intermediate:
+            outs = []
         for model in self.models[::-1]:
             z = model.decode(z, c)
+            if intermediate:
+                outs.append(z)
+        if intermediate:
+            z = z, outs
         return z
 
     def _encoder_jac(self, x, c, **kwargs):
@@ -260,9 +275,12 @@ class FreeFormBase(Trainable):
         x = self.decode(z, c)
         return x.reshape(sample_shape + x.shape[1:])
 
-    def exact_log_prob(self, x, c, jacobian_target="decoder",
+    def exact_log_prob(self, x, c=None, jacobian_target="decoder",
                        input_is_z=False, **kwargs) -> LogProbResult:
         metrics = {}
+
+        if c is None and not self.is_conditional():
+            c = torch.empty((x.shape[0], 0), device=x.device, dtype=x.dtype)
 
         if input_is_z:
             if jacobian_target != "decoder":
@@ -315,18 +333,48 @@ class FreeFormBase(Trainable):
         estimator_name = config.pop("name")
         assert estimator_name == "surrogate"
 
-        out = nll_surrogate(
+        encoder_intermediates = []
+        decoder_intermediates = []
+
+        def wrapped_encode(x):
+            z, intermediates = self.encode(x, c, intermediate=True)
+            encoder_intermediates.extend(intermediates)
+            return z
+
+        def wrapped_decode(z):
+            x, intermediates = self.decode(z, c, intermediate=True)
+            decoder_intermediates.extend(intermediates)
+            return x
+
+        out = volume_change_surrogate(
             x,
-            lambda _x: self.encode(_x, c),
-            lambda z: self.decode(z, c),
+            wrapped_encode,
+            wrapped_decode,
             **kwargs
         )
         volume_change = out.surrogate
+
+        out.regularizations.update(self.intermediate_reconstructions(decoder_intermediates, encoder_intermediates))
 
         latent_prob = self._latent_log_prob(out.z, c)
         return LogProbResult(
             out.z, out.x1, latent_prob + volume_change, out.regularizations
         )
+
+    def intermediate_reconstructions(self, decoder_intermediates, encoder_intermediates):
+        regularizations = {}
+        if len(decoder_intermediates) > 1:
+            regularizations["intermediate_reconstruction_all"] = 0.0
+        for idx, (a, b) in enumerate(zip(encoder_intermediates[:-1], decoder_intermediates[-1:0:-1])):
+            if a.shape != b.shape:
+                try:
+                    b = b.view(a.shape)
+                except Exception as e:
+                    raise ValueError(f"Shapes do not match for intermediate reconstruction {idx}: {a.shape} vs {b.shape}") from e
+            intermediate_loss = torch.sum((a - b).reshape(a.shape[0], -1) ** 2, -1)
+            regularizations[f"intermediate_reconstruction_{idx}"] = intermediate_loss
+            regularizations["intermediate_reconstruction_all"] += intermediate_loss
+        return regularizations
 
     def _reconstruction_loss(self, a, b):
         return torch.sum((a - b).reshape(a.shape[0], -1) ** 2, -1)
@@ -520,7 +568,7 @@ class FreeFormBase(Trainable):
         try:
             for key, value in self.val_data.compute_metrics(self).items():
                 self.log(f"validation/{key}", value)
-        except AttributeError:
+        except (AttributeError, TypeError):
             pass
 
     def on_fit_end(self) -> None:

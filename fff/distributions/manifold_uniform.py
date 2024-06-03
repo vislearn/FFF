@@ -20,33 +20,35 @@ class ManifoldUniformDistribution(Distribution):
         if isinstance(manifold, Hypersphere):
             # print(f"Setting normalization constant for {n}-hypersphere")
             n = manifold.dim
-            normalization_constant = 2 * (np.pi ** ((n + 1) / 2)) / np.math.gamma((n + 1) / 2)
+            log_norm = -np.log(2 * (np.pi ** ((n + 1) / 2)) / np.math.gamma((n + 1) / 2))
         elif isinstance(manifold, ProductManifold):
             # Only works for tori
             assert all(
                 isinstance(factor, Hypersphere) and factor.dim == 1
                 for factor in manifold.factors
             )
-            normalization_constant = (2 * np.pi) ** manifold.dim
+            log_norm = -manifold.dim * np.log(2 * np.pi)
         elif isinstance(manifold, _SpecialOrthogonalMatrices):
             """https://arxiv.org/pdf/math-ph/0210033.pdf"""
             n = manifold.n
             if n == 2:
-                normalization_constant = 2 * math.pi
+                log_norm = -np.log(2 * np.pi)
             elif n == 3:
-                normalization_constant = 8 * math.pi ** 2
+                log_norm = -np.log(8 * np.pi ** 2)
             else:
                 out = (self.n - 1) * math.log(2)
                 out += ((self.n - 1) * (self.n + 2) / 4) * math.log(math.pi)
                 k = torch.expand_dims(torch.arange(2, self.n + 1), axis=-1)
                 out += torch.sum(np.lgamma(k / 2), axis=0)
-                normalization_constant = math.exp(out)
+                log_norm = -out
+        elif hasattr(manifold, "volume"):
+            log_norm = -torch.log(manifold.volume)
         else:
             warnings.warn(f"No normalization constant could be set for manifold {manifold}, "
                           f"the distribution will be unnormalized.")
-            normalization_constant = 1
+            log_norm = 0
 
-        self.log_norm = - np.log(normalization_constant)
+        self.log_norm = log_norm
         self.device = device
 
     def rsample(self, sample_shape=torch.Size()):

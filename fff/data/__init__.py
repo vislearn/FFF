@@ -34,6 +34,9 @@ def load_dataset(name: str, **kwargs) -> TrainValTest:
     elif name == "special-orthogonal":
         from fff.data.special_orthogonal import make_so_data
         return make_so_data(**kwargs)
+    elif name == "bunny":
+        from fff.data.meshes import make_bunny_data
+        return make_bunny_data(**kwargs)
     elif name.startswith("torus_"):
         if name == "torus_protein":
             from .torus import get_torus_protein_dataset
@@ -41,6 +44,15 @@ def load_dataset(name: str, **kwargs) -> TrainValTest:
         elif name == "torus_rna":
             from .torus import get_torus_rna_dataset
             return get_torus_rna_dataset(**kwargs)
+    elif name == "hyperbolic-wrapped-normal":
+        from .hyperbolic import get_hyperbolic_wrapped_normal_dataset
+        return get_hyperbolic_wrapped_normal_dataset(**kwargs)
+    elif name == "mcnf":
+        from .hyperbolic import get_mcnf_data
+        return get_mcnf_data(**kwargs)
+    elif name == "hyperbolic_toy":
+        from .hyperbolic import get_hyperbolic_toy_dataset
+        return get_hyperbolic_toy_dataset(**kwargs)
     elif name in ["fire", "flood", "quakes", "volcano"]:
         from .earth import get_earth_dataset
         return get_earth_dataset(name, **kwargs)

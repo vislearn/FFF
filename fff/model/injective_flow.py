@@ -2,8 +2,8 @@ import torch.nn
 from torch import nn
 
 from fff.base import ModelHParams
+from fff.utils.utils import batch_wrap
 from .utils import make_inn
-from ..loss import batch_wrap
 
 
 class InjectiveFlowHParams(ModelHParams):

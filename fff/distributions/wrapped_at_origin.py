@@ -11,7 +11,7 @@ from torch.distributions import (
 )
 from geomstats.geometry.manifold import Manifold
 
-from fff.data.manifold import fix_device
+from fff.utils.utils import fix_device
 from fff.utils.manifolds import PoincareBall_, Hyperboloid_
 from fff.distributions.mixture_distribution import MixtureDistribution
 from fff.distributions.energy_toy_distribution import EnergyDistribution

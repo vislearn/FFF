@@ -2,8 +2,8 @@ from copy import deepcopy
 import torch
 
 from fff.base import FreeFormBase, FreeFormBaseHParams, VolumeChangeResult, LogProbResult
-from fff.loss import volume_change_surrogate
-from fff.data.manifold import fix_device
+from fff.loss import volume_change_surrogate, volume_change_metric
+from fff.utils.utils import fix_device
 from fff.utils.geometry import project_jac_to_tangent_space
 
 
@@ -131,11 +131,13 @@ class ManifoldFreeFormFlow(FreeFormBase):
         )
         volume_change = out.surrogate
 
+        metric_volume_change = volume_change_metric(x, out.z, self.manifold)
+
         out.regularizations.update(self.intermediate_reconstructions(encoder_intermediates, decoder_intermediates))
 
         latent_prob = self._latent_log_prob(out.z, c)
         return LogProbResult(
-            out.z, out.x1, latent_prob + volume_change, out.regularizations
+            out.z, out.x1, latent_prob + volume_change + metric_volume_change, out.regularizations
         )
 
     def dequantize(self, batch):
@@ -150,4 +152,3 @@ class ManifoldFreeFormFlow(FreeFormBase):
         if self.hparams.manifold_distance:
             return fix_device(self.manifold.metric.squared_dist)(a, b)
         return super()._reconstruction_loss(a, b)
-

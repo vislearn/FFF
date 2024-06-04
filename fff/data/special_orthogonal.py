@@ -9,8 +9,8 @@ from geomstats.geometry.symmetric_matrices import SymmetricMatrices
 from scipy.stats import special_ortho_group
 
 from torch.utils.data import TensorDataset
-
-from fff.data.manifold import ManifoldDataset, fix_device
+from fff.utils.utils import fix_device
+from fff.data.manifold import ManifoldDataset
 from geomstats.geometry.special_orthogonal import _SpecialOrthogonalMatrices
 import geomstats.backend as gs
 

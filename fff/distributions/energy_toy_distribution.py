@@ -16,17 +16,18 @@ class EnergyDistribution(Distribution):
         **kwargs
     ):
         self.loc = loc
+        device = loc.device
         self.scale = scale
         self.Z = Z
-        alpha = torch.tensor(rotation)
+        alpha = torch.tensor(rotation, device=device)
         self.R = torch.tensor(
             [
                 [torch.cos(alpha), -torch.sin(alpha)],
                 [torch.sin(alpha), torch.cos(alpha)],
-            ]
+            ], device=device
         )
-        low = torch.tensor([-4.0, -3.0])
-        high = torch.tensor([4.0, 10.0])
+        low = torch.tensor([-4.0, -3.0], device=device)
+        high = torch.tensor([4.0, 10.0], device=device)
         self.base_distribution = Uniform(low, high)
         super().__init__(*args, **kwargs)
 
@@ -45,7 +46,7 @@ class EnergyDistribution(Distribution):
         indices = np.random.choice(
             np.arange(shape_base[0]),
             shape[0],
-            p=(energy / energy.sum()).detach().numpy(),
+            p=(energy / energy.sum()).cpu().detach().numpy(),
         )
         return (self.R @ samples[indices].T).T + self.loc
 

@@ -32,7 +32,7 @@ from torch.autograd import grad
 from torch.autograd.forward_ad import dual_level, make_dual, unpack_dual
 
 from fff.utils.geometry import random_tangent_vec
-from fff.utils.utils import sum_except_batch
+from fff.utils.utils import sum_except_batch, fix_device
 from fff.utils.types import Transform
 
 SurrogateOutput = namedtuple(
@@ -188,7 +188,7 @@ def reconstruction_loss(
 
     if manifold is not None:
         metric = manifold.default_metric()(manifold)
-        return metric.squared_dist(a, b)
+        return fix_device(metric.squared_dist)(a, b)
     else:
         return torch.sum((a - b) ** 2, dim=tuple(range(1, len(a.shape))))
 

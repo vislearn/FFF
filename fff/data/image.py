@@ -152,8 +152,8 @@ def _process_img_data(train_dataset, val_dataset, test_dataset, label=None, cond
     if label is not None or conditional:
         train_targets = train_dataset.targets
         if val_dataset is None:
-            train_targets = train_targets[:-val_data_split]
             val_targets = train_targets[-val_data_split:]
+            train_targets = train_targets[:-val_data_split]
         else:
             val_targets = val_dataset.targets
         test_targets = test_dataset.targets

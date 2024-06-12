@@ -33,12 +33,12 @@ This is the official `PyTorch` implementation for our papers:
 
 ## Installation
 
-Options:
+<!-- Options:
 
 1. Install via `pip` and use our package.
 2. Copy the loss script with `PyTorch` as the only dependency to train in your own setup.
 
-### Install via pip
+### Install via pip -->
 
 The following will install our package along with all of its dependencies:
 
@@ -57,13 +57,13 @@ Then you can import the package via
 import fff
 ```
 
-### Copy `fff/loss.py` into your project
+<!-- ### Copy `fff/loss.py` into your project
 
 If you do not want to add our `fff` package as a dependency,
 but still want to use the FFF or FIF loss function,
 you can copy the `fff/loss.py` file into your own project.
 It does not have any dependencies except for PyTorch.
-
+-->
 
 ## Basic usage
 

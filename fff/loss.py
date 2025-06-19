@@ -24,7 +24,10 @@ from collections import namedtuple
 from functools import wraps, partial
 from math import sqrt, prod
 from typing import Union
-from geomstats.geometry.manifold import Manifold
+try:
+    from geomstats.geometry.manifold import Manifold
+except ImportError:
+    Manifold = object
 
 import torch
 from torch.distributions import Distribution

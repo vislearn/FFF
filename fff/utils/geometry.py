@@ -1,6 +1,9 @@
 from math import prod
 import torch
-from geomstats.geometry.manifold import Manifold
+try:
+    from geomstats.geometry.manifold import Manifold
+except ImportError:
+    Manifold = object
 
 
 def project_jac_to_tangent_space(

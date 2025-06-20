@@ -37,9 +37,8 @@ def volume_change_exact(
     """
 
     regularizations = {}
-    exact = 0
 
-    x.requires_grad_()
+    x = x.clone().requires_grad_()
     z = encode(x)
 
     # M-FFF: Project to manifold and store projection distance for

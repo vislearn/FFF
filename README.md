@@ -33,23 +33,20 @@ This is the official `PyTorch` implementation for our papers:
 
 ## Installation
 
-<!-- Options:
-
-1. Install via `pip` and use our package.
-2. Copy the loss script with `PyTorch` as the only dependency to train in your own setup.
-
-### Install via pip -->
-
-The following will install our package along with all of its dependencies:
+To run our experiments, install the dependencies first:
 
 ```bash
 git clone https://github.com/vislearn/FFF.git
 cd FFF
 pip install -r requirements.txt
-pip install .
 ```
 
-In the last line, use `pip install -e .` if you want to edit the code.
+If you want to import our loss into your project, install our package using `pip`:
+
+```bash
+pip install .
+```
+In the last line, use `pip install -e .` if you want to edit our code.
 
 Then you can import the package via
 
@@ -57,44 +54,12 @@ Then you can import the package via
 import fff
 ```
 
-<!-- ### Copy `fff/loss.py` into your project
-
-If you do not want to add our `fff` package as a dependency,
-but still want to use the FFF or FIF loss function,
-you can copy the `fff/loss.py` file into your own project.
-It does not have any dependencies except for PyTorch.
--->
 
 ## Basic usage
 
-### Train your architecture 
+### Train your own Free-Form Flow 
 
-```python
-import torch
-import fff.loss as loss
-
-
-class FreeFormFlow(torch.nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.encoder = torch.nn.Sequential(...)
-        self.decoder = torch.nn.Sequential(...)
-
-
-model = FreeFormFlow()
-optim = ...
-data_loader = ...
-n_epochs = ...
-beta = ...
-
-for epoch in range(n_epochs):
-    for batch in data_loader:
-        optim.zero_grad()
-        loss = loss.fff_loss(batch, model.encoder, model.decoder, beta)
-        loss.backward()
-        optim.step()
-```
-
+See [toy-example.ipynb](toy-example.ipynb) for an example how to learn a model for toy data.
 
 ### Reproduce our experiments
 

@@ -61,6 +61,10 @@ import fff
 
 See [toy-example.ipynb](toy-example.ipynb) for an example how to learn a model for toy data.
 
+### Tutorials
+
+Check out our tutorial on manifold free-form flows [here](https://drive.google.com/file/d/1z5qjozcVUcAr_X7UrrXmbol2ETMu_q86/view?usp=sharing)
+
 ### Reproduce our experiments
 
 All training configurations from our papers can be found in the `configs/(fff|fif)` directories.
